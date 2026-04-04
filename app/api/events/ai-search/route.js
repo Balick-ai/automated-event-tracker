@@ -26,17 +26,19 @@ export async function POST(request) {
   // Two search prompts for comprehensive coverage
   const isNYC = (city.toLowerCase().includes('new york') || city.toLowerCase().includes('nyc') || city.toLowerCase().includes('brooklyn'));
 
+  // Prompt 1: Aggregator sites (these cover events NOT on Ticketmaster)
   const searchPrompts = [
-    `Search for upcoming EDM, electronic, house, and techno music events in ${location} happening between ${startDate} and ${endDateStr}. Check Resident Advisor, edmtrain, 19hz, and DICE listings. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
+    `Search for upcoming EDM, electronic, house, and techno music events in ${location} happening between ${startDate} and ${endDateStr}. Check Resident Advisor, edmtrain, 19hz, DICE, and Bandsintown listings. Focus on events that might NOT be on Ticketmaster — club nights, underground parties, smaller venue shows. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
   ];
 
+  // Prompt 2: Venue-specific search targeting venues NOT covered by Ticketmaster
   if (isNYC) {
     searchPrompts.push(
-      `Search for upcoming electronic music and DJ events at these ${location} venues between ${startDate} and ${endDateStr}: Avant Gardner, Brooklyn Mirage, Elsewhere, Knockdown Center, Marquee, 99 Scott, Good Room, Public Records, H0L0, Terminal 5, Webster Hall, Racket, Bossa Nova Civic Club. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts.`
+      `Search for upcoming electronic music and DJ events at these ${location} nightclub and smaller venues between ${startDate} and ${endDateStr}. These venues often sell tickets through DICE, Bandsintown, Resident Advisor, or their own sites rather than Ticketmaster: Marquee NYC, Marquee Skydeck, Bossa Nova Civic Club, Basement, Schimanski, Paragon, Le Bain, Output, Nebula, Roulette, Nowadays, Jupiter Disco, Mood Ring, Black Flamingo, Silo, Baby's All Right, National Sawdust, Sultan Room, Lot 45. Also check Elsewhere Zone One, Elsewhere Hall, and any Avant Gardner events not on Ticketmaster. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts.`
     );
   } else {
     searchPrompts.push(
-      `Search for upcoming electronic music and DJ events at popular nightclubs and music venues in ${location} between ${startDate} and ${endDateStr}. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`
+      `Search for upcoming electronic music and DJ events at nightclubs, underground venues, and smaller music venues in ${location} between ${startDate} and ${endDateStr}. Focus on events sold through DICE, Bandsintown, Resident Advisor, or venue websites rather than Ticketmaster. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`
     );
   }
 

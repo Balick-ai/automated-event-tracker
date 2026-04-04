@@ -19,7 +19,8 @@ export default function DiscoveryQueue({
   isNYC = true,
 }) {
   return (
-    <div className="p-3">
+    <div className="p-3 flex flex-col gap-3">
+      {/* Discovered Shows Card */}
       <div className="rounded-xl overflow-hidden" style={{ background: '#0a1628', border: '1px solid #164e63' }}>
         {/* Header */}
         <div className="px-3.5 py-3 flex justify-between items-center" style={{ borderBottom: '1px solid #164e63' }}>
@@ -63,8 +64,8 @@ export default function DiscoveryQueue({
           </div>
         )}
 
-        {/* Results list */}
-        <div className="max-h-[60vh] overflow-auto">
+        {/* Results list — no max-height, page scrolls naturally */}
+        <div>
           {queue.length === 0 && (
             <div className="py-6 text-center text-[13px]" style={{ color: '#475569' }}>No shows found.</div>
           )}
@@ -127,46 +128,46 @@ export default function DiscoveryQueue({
             );
           })}
         </div>
+      </div>
 
-        {/* Unverified shows section */}
-        {unverifiedShows.length > 0 && (
-          <div style={{ borderTop: '2px solid #92400e' }}>
-            <div className="px-3.5 py-3 flex items-center gap-2" style={{ background: '#1a1200' }}>
-              <span className="text-base">&#9888;&#65039;</span>
-              <div>
-                <div className="text-[13px] font-semibold" style={{ color: '#f59e0b' }}>
-                  {unverifiedShows.length} tracked show{unverifiedShows.length > 1 ? 's' : ''} not found in this search
-                </div>
-                <div className="text-[11px]" style={{ color: '#a3854a' }}>
-                  May be cancelled, rescheduled, or just not indexed. Please verify.
-                </div>
+      {/* Unverified Shows Card — separate from discovered */}
+      {unverifiedShows.length > 0 && (
+        <div className="rounded-xl overflow-hidden" style={{ background: '#1a1200', border: '1px solid #92400e' }}>
+          <div className="px-3.5 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #92400e' }}>
+            <span className="text-base">&#9888;&#65039;</span>
+            <div>
+              <div className="text-[13px] font-semibold" style={{ color: '#f59e0b' }}>
+                {unverifiedShows.length} tracked show{unverifiedShows.length > 1 ? 's' : ''} not found
+              </div>
+              <div className="text-[11px]" style={{ color: '#a3854a' }}>
+                May be cancelled, rescheduled, or just not indexed.
               </div>
             </div>
-            <div className="max-h-[300px] overflow-auto">
-              {unverifiedShows.map(s => (
-                <div key={s.id} className="px-3.5 py-2.5 flex justify-between items-start" style={{ borderTop: '1px solid #2a1e00' }}>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>{s.artist}</div>
-                    <div className="text-xs" style={{ color: '#64748b' }}>{s.venue} · {formatDate(s.date)}</div>
-                  </div>
-                  <div className="flex gap-1 shrink-0 ml-2">
-                    <button onClick={() => onConfirmStillHappening(s.id)}
-                            className="rounded-md cursor-pointer border-none px-2 py-[5px] text-[11px] font-semibold"
-                            style={{ background: '#064e3b', color: '#10b981' }}>
-                      Still On
-                    </button>
-                    <button onClick={() => onRemoveUnverified(s.id)}
-                            className="rounded-md cursor-pointer border-none px-2 py-[5px] text-[11px] font-semibold"
-                            style={{ background: '#450a0a', color: '#ef4444' }}>
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
-        )}
-      </div>
+          <div>
+            {unverifiedShows.map(s => (
+              <div key={s.id} className="px-3.5 py-2.5 flex justify-between items-start" style={{ borderTop: '1px solid #2a1e00' }}>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>{s.artist}</div>
+                  <div className="text-xs" style={{ color: '#64748b' }}>{s.venue} · {formatDate(s.date)}</div>
+                </div>
+                <div className="flex gap-1 shrink-0 ml-2">
+                  <button onClick={() => onConfirmStillHappening(s.id)}
+                          className="rounded-md cursor-pointer border-none px-2 py-[5px] text-[11px] font-semibold"
+                          style={{ background: '#064e3b', color: '#10b981' }}>
+                    Still On
+                  </button>
+                  <button onClick={() => onRemoveUnverified(s.id)}
+                          className="rounded-md cursor-pointer border-none px-2 py-[5px] text-[11px] font-semibold"
+                          style={{ background: '#450a0a', color: '#ef4444' }}>
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

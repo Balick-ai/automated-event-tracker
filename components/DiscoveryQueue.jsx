@@ -1,7 +1,7 @@
 'use client';
 
-import { X, Plus, Edit3, XCircle, CheckCheck, Globe } from 'lucide-react';
-import { formatDate, formatTime12 } from '@/lib/utils';
+import { X, Plus, Edit3, XCircle, CheckCheck, Globe, Info } from 'lucide-react';
+import { formatDate, formatTime12, SOURCE_LABELS } from '@/lib/utils';
 
 export default function DiscoveryQueue({
   queue,
@@ -16,6 +16,7 @@ export default function DiscoveryQueue({
   onClose,
   onConfirmStillHappening,
   onRemoveUnverified,
+  isNYC = true,
 }) {
   return (
     <div className="p-3">
@@ -52,6 +53,16 @@ export default function DiscoveryQueue({
           </div>
         )}
 
+        {/* Coverage info */}
+        {!isNYC && (
+          <div className="px-3.5 py-2 flex items-start gap-2" style={{ borderBottom: '1px solid #164e63', background: '#0c1a2e' }}>
+            <Info size={14} color="#0ea5e9" className="shrink-0 mt-0.5" />
+            <div className="text-[11px] leading-snug" style={{ color: '#64748b' }}>
+              Venue-specific search is currently optimized for NYC. Your area uses genre-based search only. Use <span style={{ color: '#a78bfa' }}>AI Search</span> for better coverage in other cities.
+            </div>
+          </div>
+        )}
+
         {/* Results list */}
         <div className="max-h-[60vh] overflow-auto">
           {queue.length === 0 && (
@@ -67,10 +78,18 @@ export default function DiscoveryQueue({
                     <div className="text-sm font-semibold" style={{ color: dup ? '#475569' : '#e2e8f0' }}>
                       {item.artist}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#64748b' }}>
+                    <div className="text-xs mt-0.5 flex items-center gap-1 flex-wrap" style={{ color: '#64748b' }}>
                       {item.venue} · {formatDate(item.date)}
                       {item.startTime ? ` · ${formatTime12(item.startTime)}` : ''}
                       {item.endDate ? ` – ${formatDate(item.endDate)}` : ''}
+                      {item._source && (() => {
+                        const src = SOURCE_LABELS[item._source];
+                        return src ? (
+                          <span className="text-[9px] font-medium px-[5px] py-[1px] rounded" style={{ color: src.color, background: `${src.color}15` }}>
+                            {src.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                     {item.notes && (
                       <div className="text-[11px] mt-0.5 whitespace-pre-wrap leading-snug" style={{ color: '#475569' }}>

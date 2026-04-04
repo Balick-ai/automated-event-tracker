@@ -38,6 +38,7 @@ export default function EventTracker() {
   const [filterTicket, setFilterTicket] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [toast, setToast] = useState(null);
+  const [searchBanner, setSearchBanner] = useState(null);
 
   // Discovery state
   const [discovering, setDiscovering] = useState(false);
@@ -305,8 +306,12 @@ export default function EventTracker() {
       });
 
       setDiscoveryQueue(mergedQueue);
-      if (mergedQueue.length > 0) setView('queue');
-      showToast(`AI search found ${newItems.filter(d => !d._duplicate).length} new events`);
+      const newCount = newItems.filter(d => !d._duplicate).length;
+      if (newCount > 0) {
+        setSearchBanner({ message: `AI search found ${newCount} new event${newCount !== 1 ? 's' : ''}`, type: 'ai' });
+      } else {
+        showToast('AI search complete — no new events found');
+      }
 
       // Verification
       const today = todayStr();
@@ -413,6 +418,28 @@ export default function EventTracker() {
         </div>
       )}
 
+      {/* Search complete banner */}
+      {searchBanner && view !== 'queue' && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-[400px]">
+          <button onClick={() => { setView('queue'); setSearchBanner(null); }}
+                  className="w-full px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer border-none text-white flex items-center justify-center gap-2"
+                  style={{
+                    background: searchBanner.type === 'ai'
+                      ? 'linear-gradient(135deg, #7c3aed, #ec4899)'
+                      : 'linear-gradient(135deg, #0ea5e9, #06b6d4)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  }}>
+            <Sparkles size={16} />
+            {searchBanner.message} — tap to view
+          </button>
+          <button onClick={() => setSearchBanner(null)}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs cursor-pointer border-none"
+                  style={{ background: '#1e1b30', color: '#94a3b8' }}>
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #1a1025 0%, #0f0a1a 50%, #0a1628 100%)', borderBottom: '1px solid #1e1b30' }}
            className="px-4 pt-4 pb-3">
@@ -491,7 +518,7 @@ export default function EventTracker() {
             <Filter size={13} />
           </button>
           {discoveryQueue && !discovering && (
-            <button onClick={() => setView('queue')}
+            <button onClick={() => { setView('queue'); setSearchBanner(null); }}
                     className="flex items-center gap-[3px] px-2 py-1.5 rounded-lg text-xs cursor-pointer"
                     style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#0ea5e9' }}>
               <Globe size={13} />
@@ -562,6 +589,7 @@ export default function EventTracker() {
           onClose={() => { setDiscoveryQueue(null); setView('calendar'); }}
           onConfirmStillHappening={confirmStillHappening}
           onRemoveUnverified={removeUnverified}
+          isNYC={(settings.city || 'New York').toLowerCase().includes('new york') || (settings.city || '').toLowerCase().includes('nyc')}
         />
       )}
 

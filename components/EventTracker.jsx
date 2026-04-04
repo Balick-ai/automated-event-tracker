@@ -12,12 +12,22 @@ import ListView from './ListView';
 import FilterPanel from './FilterPanel';
 import EditModal from './EditModal';
 import SettingsModal from './SettingsModal';
+import DiscoveryQueue from './DiscoveryQueue';
+
+function isDuplicate(discovered, existingShows) {
+  const da = discovered.artist.toLowerCase().trim();
+  const dd = discovered.date;
+  return existingShows.some(s => {
+    const ea = s.artist.toLowerCase().trim();
+    return s.date === dd && (ea === da || ea.includes(da) || da.includes(ea));
+  });
+}
 
 export default function EventTracker() {
   const [shows, setShows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('calendar');
-  const [settings, setSettings] = useState({ syncNotGoing: false, calendarId: null, calendarName: 'Automated Event Tracker' });
+  const [settings, setSettings] = useState({ syncNotGoing: false, calendarId: null, calendarName: 'Automated Event Tracker', city: 'New York', stateCode: 'NY', radius: 25 });
   const [modal, setModal] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -25,6 +35,14 @@ export default function EventTracker() {
   const [filterTicket, setFilterTicket] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [toast, setToast] = useState(null);
+
+  // Discovery state
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveryQueue, setDiscoveryQueue] = useState(null);
+  const [discoveryError, setDiscoveryError] = useState(null);
+  const [discoveryWarning, setDiscoveryWarning] = useState(null);
+  const [dismissed, setDismissed] = useState(new Set());
+  const [lastSearched, setLastSearched] = useState(null);
 
   // Load data on mount
   useEffect(() => {
@@ -82,6 +100,125 @@ export default function EventTracker() {
     persist(shows.map(x => x.id === id ? { ...x, attending: newStatus } : x));
   }, [shows, persist]);
 
+  // --- DISCOVERY ---
+  const runDiscovery = useCallback(async () => {
+    setDiscovering(true);
+    setDiscoveryError(null);
+    setDiscoveryWarning(null);
+    setDiscoveryQueue(null);
+    setDismissed(new Set());
+
+    try {
+      const params = new URLSearchParams({
+        city: settings.city || 'New York',
+        stateCode: settings.stateCode || 'NY',
+        radius: String(settings.radius || 25),
+      });
+
+      const res = await fetch(`/api/events/discover?${params}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `API error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const events = data.events || [];
+
+      if (events.length === 0) {
+        setDiscoveryWarning('No events found. Try adjusting your location or radius in Settings.');
+      }
+
+      // Build queue with duplicate detection
+      const queue = events.map(d => ({
+        ...d,
+        _duplicate: isDuplicate(d, shows),
+        _id: uid(),
+      }));
+
+      // Sort: new shows first, then by date
+      queue.sort((a, b) => {
+        if (a._duplicate !== b._duplicate) return a._duplicate ? 1 : -1;
+        return a.date.localeCompare(b.date);
+      });
+
+      setDiscoveryQueue(queue);
+      if (queue.length > 0) setView('queue');
+
+      // --- Verification: flag unverified tracked shows ---
+      const today = todayStr();
+      const now = Date.now();
+      const updatedShows = shows.map(s => {
+        if (s.date < today) return s; // skip past shows
+        if (!s.lastVerified && s.source === 'manual') return s; // skip new manual shows
+
+        const found = events.some(d => {
+          const da = d.artist.toLowerCase().trim();
+          const ea = s.artist.toLowerCase().trim();
+          const dateMatch = s.endDate
+            ? (d.date >= s.date && d.date <= s.endDate)
+            : d.date === s.date;
+          return dateMatch && (ea === da || ea.includes(da) || da.includes(ea));
+        });
+
+        if (found) {
+          return { ...s, lastVerified: now, unverified: false };
+        } else {
+          return { ...s, unverified: true };
+        }
+      });
+      persist(updatedShows);
+
+      setLastSearched(now);
+    } catch (err) {
+      setDiscoveryError(err.message || 'Search failed.');
+    } finally {
+      setDiscovering(false);
+    }
+  }, [shows, settings, persist]);
+
+  const addDiscoveredShow = useCallback((item) => {
+    persist([...shows, {
+      id: uid(), date: item.date, endDate: item.endDate, artist: item.artist,
+      venue: item.venue, ticketStatus: 'need', attending: 'undecided',
+      startTime: item.startTime || null, endTime: item.endTime || null,
+      notes: item.notes || '', source: 'search', calendarSynced: false,
+      calendarEventId: null, lastVerified: Date.now(), unverified: false,
+    }]);
+    setDiscoveryQueue(q => q ? q.map(d => d._id === item._id ? { ...d, _duplicate: true, _justAdded: true } : d) : q);
+  }, [shows, persist]);
+
+  const editAndAddDiscovered = useCallback((item) => {
+    setModal({
+      id: '', date: item.date, endDate: item.endDate || '', artist: item.artist,
+      venue: item.venue, ticketStatus: 'need', attending: 'undecided',
+      startTime: item.startTime || '', endTime: item.endTime || '',
+      notes: item.notes || '', source: 'search', calendarSynced: false,
+      calendarEventId: null, lastVerified: Date.now(), unverified: false,
+    });
+    setDismissed(prev => new Set(prev).add(item._id));
+  }, []);
+
+  const addAllNew = useCallback(() => {
+    if (!discoveryQueue) return;
+    const newItems = discoveryQueue.filter(d => !d._duplicate && !dismissed.has(d._id));
+    persist([...shows, ...newItems.map(d => ({
+      id: uid(), date: d.date, endDate: d.endDate, artist: d.artist,
+      venue: d.venue, ticketStatus: 'need', attending: 'undecided',
+      startTime: d.startTime || null, endTime: d.endTime || null,
+      notes: d.notes || '', source: 'search', calendarSynced: false,
+      calendarEventId: null, lastVerified: Date.now(), unverified: false,
+    }))]);
+    setDiscoveryQueue(q => q ? q.map(d => ({ ...d, _duplicate: true, _justAdded: !d._duplicate ? true : d._justAdded })) : q);
+  }, [discoveryQueue, shows, persist, dismissed]);
+
+  const confirmStillHappening = useCallback((id) => {
+    persist(shows.map(s => s.id === id ? { ...s, unverified: false, lastVerified: Date.now() } : s));
+  }, [shows, persist]);
+
+  const removeUnverified = useCallback((id) => {
+    persist(shows.filter(s => s.id !== id));
+  }, [shows, persist]);
+
   // Filtering
   const filtered = useMemo(() => shows.filter(s => {
     if (filterAttending !== 'all' && s.attending !== filterAttending) return false;
@@ -94,10 +231,23 @@ export default function EventTracker() {
   }), [shows, filterAttending, filterTicket, searchText]);
 
   const unsyncedCount = shows.filter(s => !s.calendarSynced && (s.attending !== 'not going' || settings.syncNotGoing)).length;
+  const newCount = discoveryQueue ? discoveryQueue.filter(d => !d._duplicate && !dismissed.has(d._id)).length : 0;
+  const unverifiedShows = useMemo(() => shows.filter(s => s.unverified && s.date >= todayStr()), [shows]);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
+  };
+
+  const timeAgoStr = (ts) => {
+    if (!ts) return null;
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
   };
 
   if (loading) {
@@ -149,10 +299,11 @@ export default function EventTracker() {
                 <span className="rounded-lg px-[5px] text-[10px]" style={{ background: 'rgba(255,255,255,0.2)' }}>{unsyncedCount}</span>
               )}
             </button>
-            <button onClick={() => showToast('Event discovery coming soon!')}
+            <button onClick={runDiscovery}
+                    disabled={discovering}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
-              <Globe size={14} />
+                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: discovering ? 0.6 : 1 }}>
+              {discovering ? <Loader size={14} className="animate-spin" /> : <Globe size={14} />}
             </button>
             <button onClick={() => setModal(emptyShow())}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
@@ -162,7 +313,14 @@ export default function EventTracker() {
           </div>
         </div>
 
-        {/* View toggle + filter */}
+        {/* Last searched */}
+        {lastSearched && !discovering && (
+          <div className="flex items-center gap-1 text-[11px] mb-2" style={{ color: '#475569' }}>
+            <Clock size={11} /> Last searched: {timeAgoStr(lastSearched)}
+          </div>
+        )}
+
+        {/* View toggle + filter + queue button */}
         <div className="flex gap-1.5 items-center flex-wrap">
           <div className="flex rounded-lg overflow-hidden" style={{ background: '#1a1625', border: '1px solid #2d2640' }}>
             <button onClick={() => setView('calendar')}
@@ -181,6 +339,16 @@ export default function EventTracker() {
                   style={{ background: showFilters ? '#7c3aed' : '#1a1625', border: '1px solid #2d2640', color: showFilters ? '#fff' : '#94a3b8' }}>
             <Filter size={13} />
           </button>
+          {discoveryQueue && !discovering && (
+            <button onClick={() => setView('queue')}
+                    className="flex items-center gap-[3px] px-2 py-1.5 rounded-lg text-xs cursor-pointer"
+                    style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#0ea5e9' }}>
+              <Globe size={13} />
+              {newCount > 0 && (
+                <span className="rounded-[10px] px-[5px] text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Filter panel */}
@@ -196,11 +364,53 @@ export default function EventTracker() {
         )}
       </div>
 
+      {/* Discovery loading */}
+      {discovering && (
+        <div className="py-10 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4"
+               style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.13), rgba(6,182,212,0.13))' }}>
+            <Globe size={28} color="#0ea5e9" className="animate-spin" style={{ animationDuration: '3s' }} />
+          </div>
+          <div className="text-[15px] font-semibold mb-1.5" style={{ color: '#e2e8f0' }}>Searching for shows...</div>
+          <div className="text-[13px]" style={{ color: '#64748b' }}>Checking Ticketmaster for events near {settings.city || 'New York'}</div>
+        </div>
+      )}
+
+      {/* Discovery error */}
+      {discoveryError && !discovering && (
+        <div className="mx-3 my-3 p-4 rounded-[10px] text-center" style={{ background: '#1a0a0a', border: '1px solid #7f1d1d' }}>
+          <div className="text-sm mb-2" style={{ color: '#ef4444' }}>{discoveryError}</div>
+          <button onClick={runDiscovery}
+                  className="px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border-none text-white"
+                  style={{ background: '#7c3aed' }}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Discovery Queue */}
+      {view === 'queue' && discoveryQueue && !discovering && (
+        <DiscoveryQueue
+          queue={discoveryQueue}
+          dismissed={dismissed}
+          warning={discoveryWarning}
+          unverifiedShows={unverifiedShows}
+          newCount={newCount}
+          onAdd={addDiscoveredShow}
+          onEditAndAdd={editAndAddDiscovered}
+          onDismiss={(id) => setDismissed(prev => new Set(prev).add(id))}
+          onAddAllNew={addAllNew}
+          onClose={() => { setDiscoveryQueue(null); setView('calendar'); }}
+          onConfirmStillHappening={confirmStillHappening}
+          onRemoveUnverified={removeUnverified}
+        />
+      )}
+
       {/* Views */}
-      {view === 'calendar' && (
+      {view === 'calendar' && !discovering && (
         <CalendarView shows={filtered} onShowClick={(s) => setModal({ ...s })} />
       )}
-      {view === 'list' && (
+      {view === 'list' && !discovering && (
         <ListView
           shows={filtered}
           onShowClick={(s) => setModal({ ...s })}
@@ -211,16 +421,18 @@ export default function EventTracker() {
       )}
 
       {/* Legend */}
-      <div className="px-4 py-3 flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid #1a1625' }}>
-        <div className="flex gap-2.5 flex-wrap">
-          {ATTEND_STATES.map(a => (
-            <div key={a} className="flex items-center gap-1 text-[11px]" style={{ color: '#64748b' }}>
-              <div className={`w-2 h-2 rounded-full ${DOT_COLORS[a]}`} />
-              {ATTEND_LABELS[a]}
-            </div>
-          ))}
+      {!discovering && (
+        <div className="px-4 py-3 flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid #1a1625' }}>
+          <div className="flex gap-2.5 flex-wrap">
+            {ATTEND_STATES.map(a => (
+              <div key={a} className="flex items-center gap-1 text-[11px]" style={{ color: '#64748b' }}>
+                <div className={`w-2 h-2 rounded-full ${DOT_COLORS[a]}`} />
+                {ATTEND_LABELS[a]}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Edit Modal */}
       {modal && (

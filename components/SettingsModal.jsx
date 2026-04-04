@@ -1,6 +1,6 @@
 'use client';
 
-import { X, HelpCircle } from 'lucide-react';
+import { X, HelpCircle, MapPin } from 'lucide-react';
 
 export default function SettingsModal({ settings, persistSettings, onClose }) {
   return (
@@ -70,6 +70,43 @@ export default function SettingsModal({ settings, persistSettings, onClose }) {
 
           <div className="text-xs" style={{ color: '#475569' }}>
             Events sync with known start time + 4hr duration. Unknown times become all-day events. Changing the calendar name and resetting the link will create a new calendar on the next sync.
+          </div>
+
+          {/* Location settings */}
+          <div>
+            <div className="text-[13px] font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
+              <MapPin size={14} /> Discovery Location
+            </div>
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1">
+                <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>City</label>
+                <input value={settings.city || ''}
+                       onChange={e => persistSettings({ ...settings, city: e.target.value })}
+                       placeholder="New York"
+                       className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
+                       style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ width: 80 }}>
+                <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>State</label>
+                <input value={settings.stateCode || ''}
+                       onChange={e => persistSettings({ ...settings, stateCode: e.target.value.toUpperCase().slice(0, 2) })}
+                       placeholder="NY"
+                       maxLength={2}
+                       className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
+                       style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ width: 80 }}>
+                <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Radius (mi)</label>
+                <input type="number" value={settings.radius || 25}
+                       onChange={e => persistSettings({ ...settings, radius: parseInt(e.target.value) || 25 })}
+                       min={5} max={100}
+                       className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
+                       style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div className="text-[11px]" style={{ color: '#475569' }}>
+              Used for Discover searches. Default: New York, NY, 25 miles.
+            </div>
           </div>
 
           {/* Show Setup Guide */}

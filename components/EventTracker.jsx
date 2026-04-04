@@ -511,45 +511,41 @@ export default function EventTracker() {
             setFilterTicket={setFilterTicket}
           />
         )}
+      </div>
 
-        {/* Searches section */}
-        <div className="mt-3 p-2.5 rounded-[10px]" style={{ background: '#12101f', border: '1px solid #1e1b30' }}>
-          <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#64748b' }}>
-            Searches
-          </div>
-          <div className="flex gap-1.5 items-center flex-wrap">
-            <button onClick={runDiscovery}
-                    disabled={discovering || aiSearching}
-                    className="flex items-center gap-[5px] rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
-              {discovering ? <Loader size={13} className="animate-spin" /> : <Globe size={13} />}
-              Discover
+      {/* Searches bar — inline with view toggle, right-aligned */}
+      <div className="px-4 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid #1e1b30', background: '#0d0b18' }}>
+        <div className="flex gap-1.5 items-center">
+          <button onClick={runDiscovery}
+                  disabled={discovering || aiSearching}
+                  className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer border-none text-white"
+                  style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
+            {discovering ? <Loader size={12} className="animate-spin" /> : <Globe size={12} />}
+            Discover
+          </button>
+          <button onClick={runAISearch}
+                  disabled={aiSearching || discovering}
+                  className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer border-none text-white"
+                  style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
+            {aiSearching ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            AI Search
+          </button>
+          {discoveryQueue && !discovering && !aiSearching && (
+            <button onClick={() => { setView('queue'); setSearchBanner(null); }}
+                    className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-medium cursor-pointer"
+                    style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#e2e8f0' }}>
+              Results
+              {newCount > 0 && (
+                <span className="rounded-full px-[5px] text-[9px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
+              )}
             </button>
-            <button onClick={runAISearch}
-                    disabled={aiSearching || discovering}
-                    className="flex items-center gap-[5px] rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
-              {aiSearching ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />}
-              AI Search
-            </button>
-            {discoveryQueue && !discovering && !aiSearching && (
-              <button onClick={() => { setView('queue'); setSearchBanner(null); }}
-                      className="flex items-center gap-[5px] rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer"
-                      style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#e2e8f0' }}>
-                Results
-                {newCount > 0 && (
-                  <span className="rounded-full px-[6px] text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
-                )}
-              </button>
-            )}
-            {lastSearched && !discovering && !aiSearching && (
-              <span className="text-[10px] ml-auto" style={{ color: '#475569' }}>
-                <Clock size={10} className="inline mr-0.5" style={{ verticalAlign: '-1px' }} />
-                {timeAgoStr(lastSearched)}
-              </span>
-            )}
-          </div>
+          )}
         </div>
+        {lastSearched && !discovering && !aiSearching && (
+          <span className="text-[10px]" style={{ color: '#475569' }}>
+            {timeAgoStr(lastSearched)}
+          </span>
+        )}
       </div>
 
       {/* Discovery loading */}

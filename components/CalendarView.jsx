@@ -7,6 +7,7 @@ import {
   getCalendarDays, dateStr, showOnDate, formatDate, showTimeStr,
 } from '@/lib/utils';
 
+
 export default function CalendarView({ shows, onShowClick }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -116,8 +117,16 @@ export default function CalendarView({ shows, onShowClick }) {
                       {s.artist}
                       {s.calendarSynced && <CalendarCheck2 size={12} color="#f59e0b" />}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#64748b' }}>
+                    <div className="text-xs mt-0.5 flex items-center gap-1 flex-wrap" style={{ color: '#64748b' }}>
                       {s.venue} · {showTimeStr(s)}
+                      {(() => {
+                        const src = SOURCE_LABELS[s.source];
+                        return src ? (
+                          <span className="text-[9px] font-medium px-[5px] py-[1px] rounded" style={{ color: src.color, background: `${src.color}15` }}>
+                            {src.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   <span className="text-[11px] px-2 py-[3px] rounded-md font-medium shrink-0"

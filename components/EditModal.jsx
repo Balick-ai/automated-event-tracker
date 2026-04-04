@@ -1,10 +1,15 @@
 'use client';
 
 import { X, Save, CalendarPlus, CalendarCheck2, Trash2 } from 'lucide-react';
-import { ATTEND_STATES, ATTEND_LABELS, TICKET_STATES, TICKET_LABELS } from '@/lib/utils';
+import {
+  ATTEND_STATES, ATTEND_LABELS, ATTEND_INLINE_COLORS,
+  TICKET_STATES, TICKET_LABELS, TICKET_INLINE_COLORS,
+  SOURCE_LABELS,
+} from '@/lib/utils';
 
 export default function EditModal({ show, setModal, onSave, onDelete, isExisting }) {
   const modal = show;
+  const sourceInfo = SOURCE_LABELS[modal.source] || SOURCE_LABELS.manual;
 
   return (
     <div className="fixed inset-0 flex items-end justify-center z-50"
@@ -15,9 +20,17 @@ export default function EditModal({ show, setModal, onSave, onDelete, isExisting
            style={{ background: '#12101f', borderRadius: '16px 16px 0 0', border: '1px solid #1e1b30', borderBottom: 'none' }}>
         {/* Header */}
         <div className="px-4 py-3.5 flex justify-between items-center" style={{ borderBottom: '1px solid #1e1b30' }}>
-          <h3 className="m-0 text-base font-bold" style={{ color: '#a78bfa' }}>
-            {modal.id ? 'Edit Show' : 'Add Show'}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="m-0 text-base font-bold" style={{ color: '#a78bfa' }}>
+              {modal.id ? 'Edit Show' : 'Add Show'}
+            </h3>
+            {modal.id && (
+              <span className="text-[10px] font-medium px-[6px] py-[2px] rounded"
+                    style={{ color: sourceInfo.color, background: `${sourceInfo.color}15` }}>
+                {sourceInfo.label}
+              </span>
+            )}
+          </div>
           <button onClick={() => setModal(null)} className="bg-transparent border-none cursor-pointer" style={{ color: '#64748b' }}>
             <X size={20} />
           </button>
@@ -95,14 +108,48 @@ export default function EditModal({ show, setModal, onSave, onDelete, isExisting
             Leave blank for all-day. End time defaults to start + 4hrs.
           </div>
 
-          {/* Attending + Ticket */}
-          <div className="flex gap-2.5">
-            <SelectField label="Attending" value={modal.attending}
-                         options={ATTEND_STATES.map(a => ({ value: a, label: ATTEND_LABELS[a] }))}
-                         onChange={v => setModal({ ...modal, attending: v })} />
-            <SelectField label="Ticket" value={modal.ticketStatus}
-                         options={TICKET_STATES.map(t => ({ value: t, label: TICKET_LABELS[t] }))}
-                         onChange={v => setModal({ ...modal, ticketStatus: v })} />
+          {/* Attending — segmented pills */}
+          <div>
+            <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Attending</label>
+            <div className="flex gap-0 rounded-lg overflow-hidden" style={{ border: '1px solid #2d2640' }}>
+              {ATTEND_STATES.map(a => {
+                const active = modal.attending === a;
+                const colors = ATTEND_INLINE_COLORS[a];
+                return (
+                  <button key={a}
+                          onClick={() => setModal({ ...modal, attending: a })}
+                          className="flex-1 py-[7px] text-[12px] font-medium cursor-pointer border-none"
+                          style={{
+                            background: active ? colors.bg : 'transparent',
+                            color: active ? colors.color : '#475569',
+                          }}>
+                    {ATTEND_LABELS[a]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ticket — segmented pills */}
+          <div>
+            <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Ticket</label>
+            <div className="flex gap-0 rounded-lg overflow-hidden" style={{ border: '1px solid #2d2640' }}>
+              {TICKET_STATES.map(t => {
+                const active = modal.ticketStatus === t;
+                const colors = TICKET_INLINE_COLORS[t];
+                return (
+                  <button key={t}
+                          onClick={() => setModal({ ...modal, ticketStatus: t })}
+                          className="flex-1 py-[7px] text-[12px] font-medium cursor-pointer border-none"
+                          style={{
+                            background: active ? colors.bg : 'transparent',
+                            color: active ? colors.color : '#475569',
+                          }}>
+                    {TICKET_LABELS[t]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Notes */}
@@ -157,20 +204,6 @@ function Field({ label, value, onChange, type = 'text' }) {
              onChange={e => onChange(e.target.value)}
              className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
              style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
-    </div>
-  );
-}
-
-function SelectField({ label, value, options, onChange }) {
-  return (
-    <div className="flex-1">
-      <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>{label}</label>
-      <select value={value}
-              onChange={e => onChange(e.target.value)}
-              className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none appearance-auto"
-              style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }}>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
     </div>
   );
 }

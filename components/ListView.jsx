@@ -1,20 +1,12 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Edit3, CalendarPlus, CalendarCheck2, Loader, Ticket, CircleCheck, CircleDot, CircleX, CircleMinus } from 'lucide-react';
+import { Edit3, CalendarPlus, CalendarCheck2, Loader, Ticket } from 'lucide-react';
 import {
-  ATTEND_STATES, ATTEND_LABELS, ATTEND_COLORS,
-  TICKET_LABELS, TICKET_COLORS,
-  formatDate, showTimeStr,
+  ATTEND_STATES, ATTEND_LABELS, ATTEND_INLINE_COLORS,
+  TICKET_STATES, TICKET_LABELS, TICKET_INLINE_COLORS,
+  SOURCE_LABELS, formatDate, showTimeStr,
 } from '@/lib/utils';
-
-function AttendIcon({ status, size = 14 }) {
-  const props = { size, strokeWidth: 2 };
-  if (status === 'going') return <CircleCheck {...props} />;
-  if (status === 'maybe') return <CircleDot {...props} />;
-  if (status === 'not going') return <CircleX {...props} />;
-  return <CircleMinus {...props} />;
-}
 
 export default function ListView({ shows, onShowClick, onCycleAttending, onCycleTicket, syncingShowIds }) {
   const sorted = useMemo(() => [...shows].sort((a, b) => a.date.localeCompare(b.date)), [shows]);
@@ -27,23 +19,19 @@ export default function ListView({ shows, onShowClick, onCycleAttending, onCycle
     <div className="p-3 flex flex-col gap-1.5">
       {sorted.map(s => {
         const isPast = new Date(s.date) < new Date(new Date().toDateString());
+        const sourceInfo = SOURCE_LABELS[s.source] || SOURCE_LABELS.manual;
         return (
           <div key={s.id}
                className="rounded-[10px] px-3 py-2.5"
                style={{
                  background: '#12101f',
-                 border: s.source === 'search' ? '1px solid #164e63' : '1px solid #1e1b30',
+                 border: '1px solid #1e1b30',
                  opacity: isPast ? 0.5 : 1,
                }}>
             <div className="flex justify-between items-start mb-1.5">
               <div onClick={() => onShowClick(s)} className="cursor-pointer flex-1">
-                <div className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#e2e8f0' }}>
+                <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap" style={{ color: '#e2e8f0' }}>
                   {s.artist}
-                  {s.source === 'search' && (
-                    <span className="text-[9px] font-medium px-[5px] py-[1px] rounded" style={{ color: '#0ea5e9', background: 'rgba(14,165,233,0.08)' }}>
-                      discovered
-                    </span>
-                  )}
                   {syncingShowIds.has(s.id) ? (
                     <Loader size={12} color="#f59e0b" className="animate-spin" />
                   ) : s.calendarSynced ? (
@@ -55,8 +43,11 @@ export default function ListView({ shows, onShowClick, onCycleAttending, onCycle
                     </span>
                   )}
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: '#64748b' }}>
+                <div className="text-xs mt-0.5 flex items-center gap-1 flex-wrap" style={{ color: '#64748b' }}>
                   {s.venue} · {formatDate(s.date)}{s.endDate ? ` – ${formatDate(s.endDate)}` : ''} · {showTimeStr(s)}
+                  <span className="text-[9px] font-medium px-[5px] py-[1px] rounded" style={{ color: sourceInfo.color, background: `${sourceInfo.color}15` }}>
+                    {sourceInfo.label}
+                  </span>
                 </div>
                 {s.notes && (
                   <div className="text-[11px] mt-[3px] whitespace-pre-wrap leading-snug" style={{ color: '#475569' }}>{s.notes}</div>
@@ -76,19 +67,43 @@ export default function ListView({ shows, onShowClick, onCycleAttending, onCycle
                 </button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => onCycleAttending(s.id)}
-                      className={`flex items-center gap-[5px] px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer bg-transparent ${ATTEND_COLORS[s.attending]}`}
-                      style={{ border: '1px solid #2d2640' }}>
-                <AttendIcon status={s.attending} size={14} />
-                {ATTEND_LABELS[s.attending]}
-              </button>
-              <button onClick={() => onCycleTicket(s.id)}
-                      className={`flex items-center gap-[5px] px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer bg-transparent ${TICKET_COLORS[s.ticketStatus]}`}
-                      style={{ border: '1px solid #2d2640' }}>
-                <Ticket size={14} />
-                {TICKET_LABELS[s.ticketStatus]}
-              </button>
+
+            {/* Segmented attending pills */}
+            <div className="flex gap-0 rounded-lg overflow-hidden mb-1.5" style={{ border: '1px solid #2d2640' }}>
+              {ATTEND_STATES.map(a => {
+                const active = s.attending === a;
+                const colors = ATTEND_INLINE_COLORS[a];
+                return (
+                  <button key={a}
+                          onClick={() => onCycleAttending(s.id, a)}
+                          className="flex-1 py-[5px] text-[11px] font-medium cursor-pointer border-none"
+                          style={{
+                            background: active ? colors.bg : 'transparent',
+                            color: active ? colors.color : '#475569',
+                          }}>
+                    {ATTEND_LABELS[a]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Segmented ticket pills */}
+            <div className="flex gap-0 rounded-lg overflow-hidden" style={{ border: '1px solid #2d2640' }}>
+              {TICKET_STATES.map(t => {
+                const active = s.ticketStatus === t;
+                const colors = TICKET_INLINE_COLORS[t];
+                return (
+                  <button key={t}
+                          onClick={() => onCycleTicket(s.id, t)}
+                          className="flex-1 py-[5px] text-[11px] font-medium cursor-pointer border-none"
+                          style={{
+                            background: active ? colors.bg : 'transparent',
+                            color: active ? colors.color : '#475569',
+                          }}>
+                    {TICKET_LABELS[t]}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );

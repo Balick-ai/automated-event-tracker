@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, CalendarCheck2, Loader } from 'lucide-react';
 import {
-  MONTHS, DAYS_HDR, DOT_COLORS, ATTEND_COLORS, ATTEND_LABELS,
+  MONTHS, DAYS_HDR, DOT_COLORS, ATTEND_INLINE_COLORS, ATTEND_LABELS, SOURCE_LABELS,
   getCalendarDays, dateStr, showOnDate, formatDate, showTimeStr,
 } from '@/lib/utils';
 
@@ -86,7 +86,7 @@ export default function CalendarView({ shows, onShowClick }) {
               </span>
               <div className="flex gap-[3px] flex-wrap justify-center">
                 {dayShows.slice(0, 3).map(s => (
-                  <div key={s.id} className={`w-[7px] h-[7px] rounded-full ${DOT_COLORS[s.attending]}`} />
+                  <div key={s.id} className="rounded-full" style={{ width: 7, height: 7, background: DOT_COLORS[s.attending] }} />
                 ))}
                 {dayShows.length > 3 && <span className="text-[8px]" style={{ color: '#94a3b8' }}>+{dayShows.length - 3}</span>}
               </div>
@@ -120,7 +120,8 @@ export default function CalendarView({ shows, onShowClick }) {
                       {s.venue} · {showTimeStr(s)}
                     </div>
                   </div>
-                  <span className={`text-[11px] px-2 py-[3px] rounded-md font-medium shrink-0 ${ATTEND_COLORS[s.attending]}`}>
+                  <span className="text-[11px] px-2 py-[3px] rounded-md font-medium shrink-0"
+                        style={{ color: ATTEND_INLINE_COLORS[s.attending]?.color, background: ATTEND_INLINE_COLORS[s.attending]?.bg }}>
                     {ATTEND_LABELS[s.attending]}
                   </span>
                 </div>

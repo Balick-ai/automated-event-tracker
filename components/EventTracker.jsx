@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader } from 'lucide-react';
 import { getAllShows, saveAllShows, getSettings, saveSettings as persistSettingsDB } from '@/lib/db';
 import {
-  uid, TICKET_STATES, TICKET_LABELS, ATTEND_STATES, ATTEND_LABELS,
-  ATTEND_COLORS, DOT_COLORS, emptyShow, todayStr,
+  uid, TICKET_STATES, ATTEND_STATES, ATTEND_LABELS,
+  DOT_COLORS, emptyShow, todayStr,
 } from '@/lib/utils';
 import CalendarView from './CalendarView';
 import ListView from './ListView';
@@ -86,18 +86,26 @@ export default function EventTracker() {
     setModal(null);
   }, [shows, persist]);
 
-  const cycleTicket = useCallback((id) => {
-    const s = shows.find(x => x.id === id);
-    if (!s) return;
-    const newStatus = TICKET_STATES[(TICKET_STATES.indexOf(s.ticketStatus) + 1) % TICKET_STATES.length];
-    persist(shows.map(x => x.id === id ? { ...x, ticketStatus: newStatus } : x));
+  const cycleTicket = useCallback((id, newStatus) => {
+    if (newStatus) {
+      persist(shows.map(x => x.id === id ? { ...x, ticketStatus: newStatus } : x));
+    } else {
+      const s = shows.find(x => x.id === id);
+      if (!s) return;
+      const next = TICKET_STATES[(TICKET_STATES.indexOf(s.ticketStatus) + 1) % TICKET_STATES.length];
+      persist(shows.map(x => x.id === id ? { ...x, ticketStatus: next } : x));
+    }
   }, [shows, persist]);
 
-  const cycleAttending = useCallback((id) => {
-    const s = shows.find(x => x.id === id);
-    if (!s) return;
-    const newStatus = ATTEND_STATES[(ATTEND_STATES.indexOf(s.attending) + 1) % ATTEND_STATES.length];
-    persist(shows.map(x => x.id === id ? { ...x, attending: newStatus } : x));
+  const cycleAttending = useCallback((id, newStatus) => {
+    if (newStatus) {
+      persist(shows.map(x => x.id === id ? { ...x, attending: newStatus } : x));
+    } else {
+      const s = shows.find(x => x.id === id);
+      if (!s) return;
+      const next = ATTEND_STATES[(ATTEND_STATES.indexOf(s.attending) + 1) % ATTEND_STATES.length];
+      persist(shows.map(x => x.id === id ? { ...x, attending: next } : x));
+    }
   }, [shows, persist]);
 
   // --- DISCOVERY ---
@@ -181,7 +189,7 @@ export default function EventTracker() {
       id: uid(), date: item.date, endDate: item.endDate, artist: item.artist,
       venue: item.venue, ticketStatus: 'need', attending: 'undecided',
       startTime: item.startTime || null, endTime: item.endTime || null,
-      notes: item.notes || '', source: 'search', calendarSynced: false,
+      notes: item.notes || '', source: 'ticketmaster', calendarSynced: false,
       calendarEventId: null, lastVerified: Date.now(), unverified: false,
     }]);
     setDiscoveryQueue(q => q ? q.map(d => d._id === item._id ? { ...d, _duplicate: true, _justAdded: true } : d) : q);
@@ -192,7 +200,7 @@ export default function EventTracker() {
       id: '', date: item.date, endDate: item.endDate || '', artist: item.artist,
       venue: item.venue, ticketStatus: 'need', attending: 'undecided',
       startTime: item.startTime || '', endTime: item.endTime || '',
-      notes: item.notes || '', source: 'search', calendarSynced: false,
+      notes: item.notes || '', source: 'ticketmaster', calendarSynced: false,
       calendarEventId: null, lastVerified: Date.now(), unverified: false,
     });
     setDismissed(prev => new Set(prev).add(item._id));
@@ -205,7 +213,7 @@ export default function EventTracker() {
       id: uid(), date: d.date, endDate: d.endDate, artist: d.artist,
       venue: d.venue, ticketStatus: 'need', attending: 'undecided',
       startTime: d.startTime || null, endTime: d.endTime || null,
-      notes: d.notes || '', source: 'search', calendarSynced: false,
+      notes: d.notes || '', source: 'ticketmaster', calendarSynced: false,
       calendarEventId: null, lastVerified: Date.now(), unverified: false,
     }))]);
     setDiscoveryQueue(q => q ? q.map(d => ({ ...d, _duplicate: true, _justAdded: !d._duplicate ? true : d._justAdded })) : q);
@@ -420,19 +428,8 @@ export default function EventTracker() {
         />
       )}
 
-      {/* Legend */}
-      {!discovering && (
-        <div className="px-4 py-3 flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid #1a1625' }}>
-          <div className="flex gap-2.5 flex-wrap">
-            {ATTEND_STATES.map(a => (
-              <div key={a} className="flex items-center gap-1 text-[11px]" style={{ color: '#64748b' }}>
-                <div className={`w-2 h-2 rounded-full ${DOT_COLORS[a]}`} />
-                {ATTEND_LABELS[a]}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Spacer */}
+      {!discovering && <div className="h-4" />}
 
       {/* Edit Modal */}
       {modal && (

@@ -1,8 +1,11 @@
 'use client';
 
-import { X, HelpCircle, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { X, HelpCircle, MapPin, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsModal({ settings, persistSettings, onClose }) {
+  const [showKey, setShowKey] = useState(false);
+
   return (
     <div className="fixed inset-0 flex items-end justify-center z-50"
          style={{ background: 'rgba(0,0,0,0.7)' }}
@@ -107,6 +110,50 @@ export default function SettingsModal({ settings, persistSettings, onClose }) {
             <div className="text-[11px]" style={{ color: '#475569' }}>
               Used for Discover searches. Default: New York, NY, 25 miles.
             </div>
+          </div>
+
+          {/* AI Search API Key */}
+          <div>
+            <div className="text-[13px] font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
+              <Sparkles size={14} /> AI Search (Optional)
+            </div>
+            <div className="text-[11px] mb-2" style={{ color: '#475569' }}>
+              Uses Claude AI to search the web for events not found on Ticketmaster. Requires an Anthropic API key — each search uses your own API credits.
+            </div>
+            <div className="mb-2">
+              <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Anthropic API Key</label>
+              <div className="flex gap-1 items-center">
+                <input type={showKey ? 'text' : 'password'}
+                       value={settings.anthropicApiKey || ''}
+                       onChange={e => persistSettings({ ...settings, anthropicApiKey: e.target.value || null })}
+                       placeholder="sk-ant-..."
+                       className="flex-1 px-2.5 py-2 rounded-lg text-[13px] outline-none"
+                       style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+                <button onClick={() => setShowKey(!showKey)}
+                        className="bg-transparent border-none cursor-pointer p-1.5" style={{ color: '#64748b' }}>
+                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+                {settings.anthropicApiKey && (
+                  <button onClick={() => persistSettings({ ...settings, anthropicApiKey: null })}
+                          className="bg-transparent border-none cursor-pointer p-1" style={{ color: '#64748b' }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="text-[11px]" style={{ color: '#475569' }}>
+              Get your key at{' '}
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#a78bfa', textDecoration: 'underline' }}>
+                console.anthropic.com
+              </a>
+              . Your key stays in your browser and is never sent to our servers.
+            </div>
+            {settings.anthropicApiKey && (
+              <div className="mt-1.5 text-[11px] flex items-center gap-1" style={{ color: '#10b981' }}>
+                &#10003; API key configured — AI Search button is active
+              </div>
+            )}
           </div>
 
           {/* Show Setup Guide */}

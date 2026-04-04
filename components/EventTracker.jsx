@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader } from 'lucide-react';
+import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader, Sparkles } from 'lucide-react';
 import { getAllShows, saveAllShows, getSettings, saveSettings as persistSettingsDB } from '@/lib/db';
 import {
   uid, TICKET_STATES, ATTEND_STATES, ATTEND_LABELS,
-  DOT_COLORS, emptyShow, todayStr,
+  DOT_COLORS, emptyShow, todayStr, sixMonthsFromNow,
+  extractText, extractJSON,
 } from '@/lib/utils';
 import CalendarView from './CalendarView';
 import ListView from './ListView';
@@ -43,6 +44,15 @@ export default function EventTracker() {
   const [discoveryWarning, setDiscoveryWarning] = useState(null);
   const [dismissed, setDismissed] = useState(new Set());
   const [lastSearched, setLastSearched] = useState(null);
+
+  // AI Search state
+  const [aiSearching, setAiSearching] = useState(false);
+  const [aiStatus, setAiStatus] = useState('');
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }, []);
 
   // Load data on mount
   useEffect(() => {
@@ -185,22 +195,24 @@ export default function EventTracker() {
   }, [shows, settings, persist]);
 
   const addDiscoveredShow = useCallback((item) => {
+    const source = item._source || 'ticketmaster';
     persist([...shows, {
       id: uid(), date: item.date, endDate: item.endDate, artist: item.artist,
       venue: item.venue, ticketStatus: 'need', attending: 'undecided',
       startTime: item.startTime || null, endTime: item.endTime || null,
-      notes: item.notes || '', source: 'ticketmaster', calendarSynced: false,
+      notes: item.notes || '', source, calendarSynced: false,
       calendarEventId: null, lastVerified: Date.now(), unverified: false,
     }]);
     setDiscoveryQueue(q => q ? q.map(d => d._id === item._id ? { ...d, _duplicate: true, _justAdded: true } : d) : q);
   }, [shows, persist]);
 
   const editAndAddDiscovered = useCallback((item) => {
+    const source = item._source || 'ticketmaster';
     setModal({
       id: '', date: item.date, endDate: item.endDate || '', artist: item.artist,
       venue: item.venue, ticketStatus: 'need', attending: 'undecided',
       startTime: item.startTime || '', endTime: item.endTime || '',
-      notes: item.notes || '', source: 'ticketmaster', calendarSynced: false,
+      notes: item.notes || '', source, calendarSynced: false,
       calendarEventId: null, lastVerified: Date.now(), unverified: false,
     });
     setDismissed(prev => new Set(prev).add(item._id));
@@ -213,7 +225,7 @@ export default function EventTracker() {
       id: uid(), date: d.date, endDate: d.endDate, artist: d.artist,
       venue: d.venue, ticketStatus: 'need', attending: 'undecided',
       startTime: d.startTime || null, endTime: d.endTime || null,
-      notes: d.notes || '', source: 'ticketmaster', calendarSynced: false,
+      notes: d.notes || '', source: d._source || 'ticketmaster', calendarSynced: false,
       calendarEventId: null, lastVerified: Date.now(), unverified: false,
     }))]);
     setDiscoveryQueue(q => q ? q.map(d => ({ ...d, _duplicate: true, _justAdded: !d._duplicate ? true : d._justAdded })) : q);
@@ -226,6 +238,177 @@ export default function EventTracker() {
   const removeUnverified = useCallback((id) => {
     persist(shows.filter(s => s.id !== id));
   }, [shows, persist]);
+
+  // --- AI SEARCH ---
+  const runAISearch = useCallback(async () => {
+    if (!settings.anthropicApiKey) {
+      showToast('Add your Anthropic API key in Settings first');
+      return;
+    }
+
+    setAiSearching(true);
+    setAiStatus('Step 1/2: Searching the web...');
+    setDiscoveryError(null);
+
+    const city = settings.city || 'New York';
+    const startDate = todayStr();
+    const endDate = sixMonthsFromNow();
+
+    const searchPrompts = [
+      `Search for upcoming EDM, electronic, house, and techno music events in ${city} happening between ${startDate} and ${endDate}. Check Resident Advisor, edmtrain, and 19hz listings. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
+      `Search for upcoming electronic music and DJ events at these ${city} venues between ${startDate} and ${endDate}: Avant Gardner, Brooklyn Mirage, Elsewhere, Knockdown Center, Marquee, 99 Scott, Good Room, Public Records, H0L0, Terminal 5, Webster Hall, Racket, Bossa Nova Civic Club. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts.`,
+    ];
+
+    try {
+      const searchResults = await Promise.allSettled(
+        searchPrompts.map(prompt =>
+          fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': settings.anthropicApiKey,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true',
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 4096,
+              tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+              messages: [{ role: 'user', content: prompt }],
+            }),
+          }).then(r => {
+            if (!r.ok) throw new Error(`API ${r.status}`);
+            return r.json();
+          })
+        )
+      );
+
+      let combinedText = '';
+      let failedSearches = 0;
+      for (const result of searchResults) {
+        if (result.status === 'fulfilled' && result.value?.content) {
+          combinedText += extractText(result.value.content) + '\n\n';
+        } else {
+          failedSearches++;
+        }
+      }
+
+      if (!combinedText.trim()) {
+        throw new Error(failedSearches === 2
+          ? 'Both AI searches failed. Check your API key and try again.'
+          : 'AI search returned no results.');
+      }
+
+      // Step 2: Parse results into JSON
+      setAiStatus('Step 2/2: Extracting event data...');
+
+      const parsePrompt = `You are a data extraction tool. Below are search results about upcoming electronic music events. Extract every event mentioned and return them as a JSON array. Return ONLY the JSON array with no other text, no markdown fences, no explanation.
+
+Each object must have exactly these fields:
+- "artist": string (main artist/DJ name)
+- "venue": string (venue name)
+- "date": string (YYYY-MM-DD format)
+- "endDate": string or null (YYYY-MM-DD for multi-day events, null otherwise)
+- "startTime": string or null (HH:MM in 24hr format if known, null if unknown)
+- "endTime": string or null (HH:MM in 24hr format if known, null if unknown)
+- "notes": string (supporting acts, special info, or empty string)
+
+If a date is ambiguous, use your best judgment for the year ${new Date().getFullYear()}. If you cannot determine an exact date, skip that event.
+
+SEARCH RESULTS:
+${combinedText}
+
+JSON ARRAY:`;
+
+      const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.anthropicApiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          system: 'You are a JSON extraction tool. You ONLY output valid JSON arrays. No markdown, no backticks, no explanation.',
+          messages: [{ role: 'user', content: parsePrompt }],
+        }),
+      });
+
+      if (!parseResponse.ok) throw new Error(`Parse error: ${parseResponse.status}`);
+      const parseData = await parseResponse.json();
+      const parseText = extractText(parseData.content);
+      const allDiscovered = extractJSON(parseText);
+
+      // Normalize and deduplicate
+      const valid = allDiscovered
+        .filter(d => d.artist && d.date && d.venue)
+        .map(d => ({
+          artist: String(d.artist).trim(),
+          venue: String(d.venue).trim(),
+          date: String(d.date).trim(),
+          endDate: d.endDate ? String(d.endDate).trim() : null,
+          startTime: d.startTime ? String(d.startTime).trim() : null,
+          endTime: d.endTime ? String(d.endTime).trim() : null,
+          notes: d.notes ? String(d.notes).trim() : '',
+          ticketUrl: null,
+        }));
+
+      const seen = new Set();
+      const deduped = valid.filter(d => {
+        const key = `${d.artist.toLowerCase()}|${d.date}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      // Build queue with duplicate detection (merge with existing queue if present)
+      const existingQueue = discoveryQueue || [];
+      const existingKeys = new Set(existingQueue.map(d => `${d.artist.toLowerCase().trim()}|${d.date}`));
+
+      const newItems = deduped
+        .filter(d => !existingKeys.has(`${d.artist.toLowerCase().trim()}|${d.date}`))
+        .map(d => ({
+          ...d,
+          _duplicate: isDuplicate(d, shows),
+          _id: uid(),
+          _source: 'ai',
+        }));
+
+      const mergedQueue = [...existingQueue, ...newItems];
+      mergedQueue.sort((a, b) => {
+        if (a._duplicate !== b._duplicate) return a._duplicate ? 1 : -1;
+        return a.date.localeCompare(b.date);
+      });
+
+      setDiscoveryQueue(mergedQueue);
+      if (mergedQueue.length > 0) setView('queue');
+      showToast(`AI search found ${newItems.filter(d => !d._duplicate).length} new events`);
+
+      // Verification
+      const today = todayStr();
+      const now = Date.now();
+      const updatedShows = shows.map(s => {
+        if (s.date < today) return s;
+        if (!s.lastVerified && s.source === 'manual') return s;
+        const found = valid.some(d => {
+          const da = d.artist.toLowerCase().trim();
+          const ea = s.artist.toLowerCase().trim();
+          const dateMatch = s.endDate ? (d.date >= s.date && d.date <= s.endDate) : d.date === s.date;
+          return dateMatch && (ea === da || ea.includes(da) || da.includes(ea));
+        });
+        return found ? { ...s, lastVerified: now, unverified: false } : { ...s, unverified: true };
+      });
+      persist(updatedShows);
+      setLastSearched(now);
+    } catch (err) {
+      setDiscoveryError(err.message || 'AI search failed.');
+    } finally {
+      setAiSearching(false);
+      setAiStatus('');
+    }
+  }, [shows, settings, persist, discoveryQueue, showToast]);
 
   // Filtering
   const filtered = useMemo(() => shows.filter(s => {
@@ -241,11 +424,6 @@ export default function EventTracker() {
   const unsyncedCount = shows.filter(s => !s.calendarSynced && (s.attending !== 'not going' || settings.syncNotGoing)).length;
   const newCount = discoveryQueue ? discoveryQueue.filter(d => !d._duplicate && !dismissed.has(d._id)).length : 0;
   const unverifiedShows = useMemo(() => shows.filter(s => s.unverified && s.date >= todayStr()), [shows]);
-
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
-  };
 
   const timeAgoStr = (ts) => {
     if (!ts) return null;
@@ -308,11 +486,19 @@ export default function EventTracker() {
               )}
             </button>
             <button onClick={runDiscovery}
-                    disabled={discovering}
+                    disabled={discovering || aiSearching}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: discovering ? 0.6 : 1 }}>
+                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
               {discovering ? <Loader size={14} className="animate-spin" /> : <Globe size={14} />}
             </button>
+            {settings.anthropicApiKey && (
+              <button onClick={runAISearch}
+                      disabled={aiSearching || discovering}
+                      className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
+                      style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
+                {aiSearching ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              </button>
+            )}
             <button onClick={() => setModal(emptyShow())}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
                     style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
@@ -373,19 +559,27 @@ export default function EventTracker() {
       </div>
 
       {/* Discovery loading */}
-      {discovering && (
+      {(discovering || aiSearching) && (
         <div className="py-10 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4"
-               style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.13), rgba(6,182,212,0.13))' }}>
-            <Globe size={28} color="#0ea5e9" className="animate-spin" style={{ animationDuration: '3s' }} />
+               style={{ background: aiSearching
+                 ? 'linear-gradient(135deg, rgba(124,58,237,0.13), rgba(236,72,153,0.13))'
+                 : 'linear-gradient(135deg, rgba(14,165,233,0.13), rgba(6,182,212,0.13))' }}>
+            {aiSearching
+              ? <Sparkles size={28} color="#a78bfa" className="animate-spin" style={{ animationDuration: '3s' }} />
+              : <Globe size={28} color="#0ea5e9" className="animate-spin" style={{ animationDuration: '3s' }} />}
           </div>
-          <div className="text-[15px] font-semibold mb-1.5" style={{ color: '#e2e8f0' }}>Searching for shows...</div>
-          <div className="text-[13px]" style={{ color: '#64748b' }}>Checking Ticketmaster for events near {settings.city || 'New York'}</div>
+          <div className="text-[15px] font-semibold mb-1.5" style={{ color: '#e2e8f0' }}>
+            {aiSearching ? 'AI searching the web...' : 'Searching for shows...'}
+          </div>
+          <div className="text-[13px]" style={{ color: '#64748b' }}>
+            {aiSearching ? aiStatus : `Checking Ticketmaster for events near ${settings.city || 'New York'}`}
+          </div>
         </div>
       )}
 
       {/* Discovery error */}
-      {discoveryError && !discovering && (
+      {discoveryError && !discovering && !aiSearching && (
         <div className="mx-3 my-3 p-4 rounded-[10px] text-center" style={{ background: '#1a0a0a', border: '1px solid #7f1d1d' }}>
           <div className="text-sm mb-2" style={{ color: '#ef4444' }}>{discoveryError}</div>
           <button onClick={runDiscovery}
@@ -397,7 +591,7 @@ export default function EventTracker() {
       )}
 
       {/* Discovery Queue */}
-      {view === 'queue' && discoveryQueue && !discovering && (
+      {view === 'queue' && discoveryQueue && !discovering && !aiSearching && (
         <DiscoveryQueue
           queue={discoveryQueue}
           dismissed={dismissed}
@@ -415,10 +609,10 @@ export default function EventTracker() {
       )}
 
       {/* Views */}
-      {view === 'calendar' && !discovering && (
+      {view === 'calendar' && !discovering && !aiSearching && (
         <CalendarView shows={filtered} onShowClick={(s) => setModal({ ...s })} />
       )}
-      {view === 'list' && !discovering && (
+      {view === 'list' && !discovering && !aiSearching && (
         <ListView
           shows={filtered}
           onShowClick={(s) => setModal({ ...s })}
@@ -429,7 +623,7 @@ export default function EventTracker() {
       )}
 
       {/* Spacer */}
-      {!discovering && <div className="h-4" />}
+      {!discovering && !aiSearching && <div className="h-4" />}
 
       {/* Edit Modal */}
       {modal && (

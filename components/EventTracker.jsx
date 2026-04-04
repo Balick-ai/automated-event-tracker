@@ -471,18 +471,6 @@ export default function EventTracker() {
                 <span className="rounded-lg px-[5px] text-[10px]" style={{ background: 'rgba(255,255,255,0.2)' }}>{unsyncedCount}</span>
               )}
             </button>
-            <button onClick={runDiscovery}
-                    disabled={discovering || aiSearching}
-                    className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
-              {discovering ? <Loader size={14} className="animate-spin" /> : <Globe size={14} />}
-            </button>
-            <button onClick={runAISearch}
-                    disabled={aiSearching || discovering}
-                    className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
-              {aiSearching ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            </button>
             <button onClick={() => setModal(emptyShow())}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
                     style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
@@ -491,15 +479,8 @@ export default function EventTracker() {
           </div>
         </div>
 
-        {/* Last searched */}
-        {lastSearched && !discovering && (
-          <div className="flex items-center gap-1 text-[11px] mb-2" style={{ color: '#475569' }}>
-            <Clock size={11} /> Last searched: {timeAgoStr(lastSearched)}
-          </div>
-        )}
-
-        {/* View toggle + filter + queue button */}
-        <div className="flex gap-1.5 items-center flex-wrap">
+        {/* View toggle + filter */}
+        <div className="flex gap-1.5 items-center flex-wrap mt-3">
           <div className="flex rounded-lg overflow-hidden" style={{ background: '#1a1625', border: '1px solid #2d2640' }}>
             <button onClick={() => setView('calendar')}
                     className="flex items-center gap-[3px] px-3 py-1.5 text-xs border-none cursor-pointer font-medium"
@@ -517,16 +498,6 @@ export default function EventTracker() {
                   style={{ background: showFilters ? '#7c3aed' : '#1a1625', border: '1px solid #2d2640', color: showFilters ? '#fff' : '#94a3b8' }}>
             <Filter size={13} />
           </button>
-          {discoveryQueue && !discovering && (
-            <button onClick={() => { setView('queue'); setSearchBanner(null); }}
-                    className="flex items-center gap-[3px] px-2 py-1.5 rounded-lg text-xs cursor-pointer"
-                    style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#0ea5e9' }}>
-              <Globe size={13} />
-              {newCount > 0 && (
-                <span className="rounded-[10px] px-[5px] text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
-              )}
-            </button>
-          )}
         </div>
 
         {/* Filter panel */}
@@ -540,6 +511,45 @@ export default function EventTracker() {
             setFilterTicket={setFilterTicket}
           />
         )}
+
+        {/* Searches section */}
+        <div className="mt-3 p-2.5 rounded-[10px]" style={{ background: '#12101f', border: '1px solid #1e1b30' }}>
+          <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#64748b' }}>
+            Searches
+          </div>
+          <div className="flex gap-1.5 items-center flex-wrap">
+            <button onClick={runDiscovery}
+                    disabled={discovering || aiSearching}
+                    className="flex items-center gap-[5px] rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer border-none text-white"
+                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
+              {discovering ? <Loader size={13} className="animate-spin" /> : <Globe size={13} />}
+              Discover
+            </button>
+            <button onClick={runAISearch}
+                    disabled={aiSearching || discovering}
+                    className="flex items-center gap-[5px] rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer border-none text-white"
+                    style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
+              {aiSearching ? <Loader size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              AI Search
+            </button>
+            {discoveryQueue && !discovering && !aiSearching && (
+              <button onClick={() => { setView('queue'); setSearchBanner(null); }}
+                      className="flex items-center gap-[5px] rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer"
+                      style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#e2e8f0' }}>
+                Results
+                {newCount > 0 && (
+                  <span className="rounded-full px-[6px] text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
+                )}
+              </button>
+            )}
+            {lastSearched && !discovering && !aiSearching && (
+              <span className="text-[10px] ml-auto" style={{ color: '#475569' }}>
+                <Clock size={10} className="inline mr-0.5" style={{ verticalAlign: '-1px' }} />
+                {timeAgoStr(lastSearched)}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Discovery loading */}

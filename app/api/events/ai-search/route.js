@@ -24,10 +24,21 @@ export async function POST(request) {
   const location = stateCode ? `${city}, ${stateCode}` : city;
 
   // Two search prompts for comprehensive coverage
+  const isNYC = (city.toLowerCase().includes('new york') || city.toLowerCase().includes('nyc') || city.toLowerCase().includes('brooklyn'));
+
   const searchPrompts = [
     `Search for upcoming EDM, electronic, house, and techno music events in ${location} happening between ${startDate} and ${endDateStr}. Check Resident Advisor, edmtrain, 19hz, and DICE listings. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
-    `Search for upcoming electronic music and DJ events at these ${location} venues between ${startDate} and ${endDateStr}: Avant Gardner, Brooklyn Mirage, Elsewhere, Knockdown Center, Marquee, 99 Scott, Good Room, Public Records, H0L0, Terminal 5, Webster Hall, Racket, Bossa Nova Civic Club. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts.`,
   ];
+
+  if (isNYC) {
+    searchPrompts.push(
+      `Search for upcoming electronic music and DJ events at these ${location} venues between ${startDate} and ${endDateStr}: Avant Gardner, Brooklyn Mirage, Elsewhere, Knockdown Center, Marquee, 99 Scott, Good Room, Public Records, H0L0, Terminal 5, Webster Hall, Racket, Bossa Nova Civic Club. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts.`
+    );
+  } else {
+    searchPrompts.push(
+      `Search for upcoming electronic music and DJ events at popular nightclubs and music venues in ${location} between ${startDate} and ${endDateStr}. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`
+    );
+  }
 
   try {
     // Step 1: Run both searches in parallel with Google Search grounding

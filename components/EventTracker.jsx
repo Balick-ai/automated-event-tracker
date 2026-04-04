@@ -477,7 +477,7 @@ export default function EventTracker() {
             <button onClick={() => setView('calendar')}
                     className="flex items-center gap-[3px] px-3 py-1.5 text-xs border-none cursor-pointer font-medium"
                     style={{ background: view === 'calendar' ? '#7c3aed' : 'transparent', color: view === 'calendar' ? '#fff' : '#94a3b8' }}>
-              <Calendar size={13} /> Cal
+              <Calendar size={13} /> Calendar
             </button>
             <button onClick={() => setView('list')}
                     className="flex items-center gap-[3px] px-3 py-1.5 text-xs border-none cursor-pointer font-medium"

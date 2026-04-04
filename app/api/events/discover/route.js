@@ -39,48 +39,36 @@ export async function GET(request) {
 
   try {
     // Run all searches in parallel
+    const isNYC = (city.toLowerCase().includes('new york') || city.toLowerCase().includes('nyc') || city.toLowerCase().includes('brooklyn')) && stateCode === 'NY';
+
     const searches = [
-      fetchTicketmasterGenre(tmKey, city, stateCode, radius, startDateTime, endDateTime),
-      fetchTicketmasterVenues(tmKey, startDateTime, endDateTime),
+      { name: 'Ticketmaster genre', fn: fetchTicketmasterGenre(tmKey, city, stateCode, radius, startDateTime, endDateTime) },
     ];
 
-    // Add Eventbrite if configured
-    if (ebToken) {
-      searches.push(fetchEventbriteVenues(ebToken));
+    // Only run venue-based searches for NYC (venue IDs are NYC-specific)
+    if (isNYC) {
+      searches.push({ name: 'Ticketmaster venues', fn: fetchTicketmasterVenues(tmKey, startDateTime, endDateTime) });
     }
 
-    const results = await Promise.allSettled(searches);
+    // Add Eventbrite if configured (NYC organizers only for now)
+    if (ebToken && isNYC) {
+      searches.push({ name: 'Eventbrite', fn: fetchEventbriteVenues(ebToken) });
+    }
+
+    const results = await Promise.allSettled(searches.map(s => s.fn));
 
     // Collect all normalized events
     let allEvents = [];
     const sources = [];
 
-    // Genre-filtered results
-    if (results[0].status === 'fulfilled') {
-      allEvents.push(...results[0].value);
-      sources.push(`Ticketmaster genre: ${results[0].value.length}`);
-    } else {
-      console.error('TM genre search failed:', results[0].reason);
-      sources.push('Ticketmaster genre: failed');
-    }
-
-    // Venue-filtered results
-    if (results[1].status === 'fulfilled') {
-      allEvents.push(...results[1].value);
-      sources.push(`Ticketmaster venues: ${results[1].value.length}`);
-    } else {
-      console.error('TM venue search failed:', results[1].reason);
-      sources.push('Ticketmaster venues: failed');
-    }
-
-    // Eventbrite results
-    if (results[2]) {
-      if (results[2].status === 'fulfilled') {
-        allEvents.push(...results[2].value);
-        sources.push(`Eventbrite: ${results[2].value.length}`);
+    for (let i = 0; i < results.length; i++) {
+      const name = searches[i].name;
+      if (results[i].status === 'fulfilled') {
+        allEvents.push(...results[i].value);
+        sources.push(`${name}: ${results[i].value.length}`);
       } else {
-        console.error('Eventbrite search failed:', results[2].reason);
-        sources.push('Eventbrite: failed');
+        console.error(`${name} failed:`, results[i].reason);
+        sources.push(`${name}: failed`);
       }
     }
 

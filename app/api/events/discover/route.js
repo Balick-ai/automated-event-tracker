@@ -28,6 +28,7 @@ export async function GET(request) {
         radius,
         unit: 'miles',
         classificationName: 'music',
+        genreId: 'KnvZfZ7vAve,KnvZfZ7vAvF',
         startDateTime,
         endDateTime,
         size: '100',

@@ -5,8 +5,7 @@ import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clo
 import { getAllShows, saveAllShows, getSettings, saveSettings as persistSettingsDB } from '@/lib/db';
 import {
   uid, TICKET_STATES, ATTEND_STATES, ATTEND_LABELS,
-  DOT_COLORS, emptyShow, todayStr, sixMonthsFromNow,
-  extractText, extractJSON,
+  DOT_COLORS, emptyShow, todayStr,
 } from '@/lib/utils';
 import CalendarView from './CalendarView';
 import ListView from './ListView';
@@ -239,135 +238,32 @@ export default function EventTracker() {
     persist(shows.filter(s => s.id !== id));
   }, [shows, persist]);
 
-  // --- AI SEARCH ---
+  // --- AI SEARCH (server-side via Gemini) ---
   const runAISearch = useCallback(async () => {
-    if (!settings.anthropicApiKey) {
-      showToast('Add your Anthropic API key in Settings first');
-      return;
-    }
-
     setAiSearching(true);
-    setAiStatus('Step 1/2: Searching the web...');
+    setAiStatus('Searching the web with AI...');
     setDiscoveryError(null);
 
-    const city = settings.city || 'New York';
-    const startDate = todayStr();
-    const endDate = sixMonthsFromNow();
-
-    const searchPrompts = [
-      `Search for upcoming EDM, electronic, house, and techno music events in ${city} happening between ${startDate} and ${endDate}. Check Resident Advisor, edmtrain, and 19hz listings. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
-      `Search for upcoming electronic music and DJ events at these ${city} venues between ${startDate} and ${endDate}: Avant Gardner, Brooklyn Mirage, Elsewhere, Knockdown Center, Marquee, 99 Scott, Good Room, Public Records, H0L0, Terminal 5, Webster Hall, Racket, Bossa Nova Civic Club. For each event, list: artist/DJ name, venue, date, start time if known, and any supporting acts.`,
-    ];
-
     try {
-      const searchResults = await Promise.allSettled(
-        searchPrompts.map(prompt =>
-          fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': settings.anthropicApiKey,
-              'anthropic-version': '2023-06-01',
-              'anthropic-dangerous-direct-browser-access': 'true',
-            },
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 4096,
-              tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
-              messages: [{ role: 'user', content: prompt }],
-            }),
-          }).then(r => {
-            if (!r.ok) throw new Error(`API ${r.status}`);
-            return r.json();
-          })
-        )
-      );
-
-      let combinedText = '';
-      let failedSearches = 0;
-      for (const result of searchResults) {
-        if (result.status === 'fulfilled' && result.value?.content) {
-          combinedText += extractText(result.value.content) + '\n\n';
-        } else {
-          failedSearches++;
-        }
-      }
-
-      if (!combinedText.trim()) {
-        throw new Error(failedSearches === 2
-          ? 'Both AI searches failed. Check your API key and try again.'
-          : 'AI search returned no results.');
-      }
-
-      // Step 2: Parse results into JSON
-      setAiStatus('Step 2/2: Extracting event data...');
-
-      const parsePrompt = `You are a data extraction tool. Below are search results about upcoming electronic music events. Extract every event mentioned and return them as a JSON array. Return ONLY the JSON array with no other text, no markdown fences, no explanation.
-
-Each object must have exactly these fields:
-- "artist": string (main artist/DJ name)
-- "venue": string (venue name)
-- "date": string (YYYY-MM-DD format)
-- "endDate": string or null (YYYY-MM-DD for multi-day events, null otherwise)
-- "startTime": string or null (HH:MM in 24hr format if known, null if unknown)
-- "endTime": string or null (HH:MM in 24hr format if known, null if unknown)
-- "notes": string (supporting acts, special info, or empty string)
-
-If a date is ambiguous, use your best judgment for the year ${new Date().getFullYear()}. If you cannot determine an exact date, skip that event.
-
-SEARCH RESULTS:
-${combinedText}
-
-JSON ARRAY:`;
-
-      const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': settings.anthropicApiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
-          system: 'You are a JSON extraction tool. You ONLY output valid JSON arrays. No markdown, no backticks, no explanation.',
-          messages: [{ role: 'user', content: parsePrompt }],
-        }),
+      const params = new URLSearchParams({
+        city: settings.city || 'New York',
+        stateCode: settings.stateCode || 'NY',
       });
 
-      if (!parseResponse.ok) throw new Error(`Parse error: ${parseResponse.status}`);
-      const parseData = await parseResponse.json();
-      const parseText = extractText(parseData.content);
-      const allDiscovered = extractJSON(parseText);
+      const res = await fetch(`/api/events/ai-search?${params}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `AI search error: ${res.status}`);
+      }
 
-      // Normalize and deduplicate
-      const valid = allDiscovered
-        .filter(d => d.artist && d.date && d.venue)
-        .map(d => ({
-          artist: String(d.artist).trim(),
-          venue: String(d.venue).trim(),
-          date: String(d.date).trim(),
-          endDate: d.endDate ? String(d.endDate).trim() : null,
-          startTime: d.startTime ? String(d.startTime).trim() : null,
-          endTime: d.endTime ? String(d.endTime).trim() : null,
-          notes: d.notes ? String(d.notes).trim() : '',
-          ticketUrl: null,
-        }));
-
-      const seen = new Set();
-      const deduped = valid.filter(d => {
-        const key = `${d.artist.toLowerCase()}|${d.date}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+      const data = await res.json();
+      const events = data.events || [];
 
       // Build queue with duplicate detection (merge with existing queue if present)
       const existingQueue = discoveryQueue || [];
       const existingKeys = new Set(existingQueue.map(d => `${d.artist.toLowerCase().trim()}|${d.date}`));
 
-      const newItems = deduped
+      const newItems = events
         .filter(d => !existingKeys.has(`${d.artist.toLowerCase().trim()}|${d.date}`))
         .map(d => ({
           ...d,
@@ -392,7 +288,7 @@ JSON ARRAY:`;
       const updatedShows = shows.map(s => {
         if (s.date < today) return s;
         if (!s.lastVerified && s.source === 'manual') return s;
-        const found = valid.some(d => {
+        const found = events.some(d => {
           const da = d.artist.toLowerCase().trim();
           const ea = s.artist.toLowerCase().trim();
           const dateMatch = s.endDate ? (d.date >= s.date && d.date <= s.endDate) : d.date === s.date;
@@ -491,14 +387,12 @@ JSON ARRAY:`;
                     style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
               {discovering ? <Loader size={14} className="animate-spin" /> : <Globe size={14} />}
             </button>
-            {settings.anthropicApiKey && (
-              <button onClick={runAISearch}
-                      disabled={aiSearching || discovering}
-                      className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
-                      style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
-                {aiSearching ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              </button>
-            )}
+            <button onClick={runAISearch}
+                    disabled={aiSearching || discovering}
+                    className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
+                    style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
+              {aiSearching ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            </button>
             <button onClick={() => setModal(emptyShow())}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
                     style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>

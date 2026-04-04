@@ -28,7 +28,7 @@ export async function POST(request) {
 
   // Prompt 1: Aggregator sites (these cover events NOT on Ticketmaster)
   const searchPrompts = [
-    `Search for upcoming EDM, electronic, house, and techno music events in ${location} happening between ${startDate} and ${endDateStr}. Check Resident Advisor, edmtrain, 19hz, DICE, and Bandsintown listings. Focus on events that might NOT be on Ticketmaster — club nights, underground parties, smaller venue shows. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
+    `Search for upcoming EDM, electronic, house, and techno music events in ${location} happening between ${startDate} and ${endDateStr}. Check Resident Advisor, edmtrain, 19hz, DICE, Bandsintown, and Songkick listings. Focus on events that might NOT be on Ticketmaster — club nights, underground parties, smaller venue shows. For each event you find, list: the artist/DJ name, venue, date, start time if known, and any supporting acts. List as many events as you can find.`,
   ];
 
   // Prompt 2: Venue-specific search targeting venues NOT covered by Ticketmaster

@@ -2,12 +2,15 @@ import { NextResponse } from 'next/server';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const city = searchParams.get('city') || 'New York';
-  const stateCode = searchParams.get('stateCode') || 'NY';
+export async function POST(request) {
+  let body = {};
+  try { body = await request.json(); } catch { /* empty body is fine */ }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const city = body.city || 'New York';
+  const stateCode = body.stateCode || 'NY';
+
+  // User-provided key takes priority over server env key
+  const apiKey = body.geminiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
   }

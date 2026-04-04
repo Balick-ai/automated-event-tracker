@@ -13,6 +13,9 @@ import FilterPanel from './FilterPanel';
 import EditModal from './EditModal';
 import SettingsModal from './SettingsModal';
 import DiscoveryQueue from './DiscoveryQueue';
+import AILimitModal from './AILimitModal';
+
+const AI_SEARCH_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function isDuplicate(discovered, existingShows) {
   const da = discovered.artist.toLowerCase().trim();
@@ -47,6 +50,7 @@ export default function EventTracker() {
   // AI Search state
   const [aiSearching, setAiSearching] = useState(false);
   const [aiStatus, setAiStatus] = useState('');
+  const [showAILimit, setShowAILimit] = useState(false);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -54,6 +58,8 @@ export default function EventTracker() {
   }, []);
 
   // Load data on mount
+  const [autoSearchDone, setAutoSearchDone] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -238,19 +244,39 @@ export default function EventTracker() {
     persist(shows.filter(s => s.id !== id));
   }, [shows, persist]);
 
+  const canUseAISearch = useCallback(() => {
+    if (settings.userGeminiKey) return true; // own key = no limit
+    if (!settings.lastAISearch) return true; // never searched
+    return Date.now() - settings.lastAISearch >= AI_SEARCH_COOLDOWN;
+  }, [settings]);
+
+  const nextAISearchAvailable = useCallback(() => {
+    if (!settings.lastAISearch) return Date.now();
+    return settings.lastAISearch + AI_SEARCH_COOLDOWN;
+  }, [settings]);
+
   // --- AI SEARCH (server-side via Gemini) ---
-  const runAISearch = useCallback(async () => {
+  const runAISearch = useCallback(async (skipRateCheck = false) => {
+    // Rate limit check (skip if user has own key or if called from auto-search with override)
+    if (!skipRateCheck && !canUseAISearch()) {
+      setShowAILimit(true);
+      return;
+    }
+
     setAiSearching(true);
     setAiStatus('Searching the web with AI...');
     setDiscoveryError(null);
 
     try {
-      const params = new URLSearchParams({
-        city: settings.city || 'New York',
-        stateCode: settings.stateCode || 'NY',
+      const res = await fetch('/api/events/ai-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: settings.city || 'New York',
+          stateCode: settings.stateCode || 'NY',
+          geminiKey: settings.userGeminiKey || undefined,
+        }),
       });
-
-      const res = await fetch(`/api/events/ai-search?${params}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `AI search error: ${res.status}`);
@@ -298,13 +324,15 @@ export default function EventTracker() {
       });
       persist(updatedShows);
       setLastSearched(now);
+      // Track AI search usage for rate limiting
+      persistSettings({ ...settings, lastAISearch: now });
     } catch (err) {
       setDiscoveryError(err.message || 'AI search failed.');
     } finally {
       setAiSearching(false);
       setAiStatus('');
     }
-  }, [shows, settings, persist, discoveryQueue, showToast]);
+  }, [shows, settings, persist, persistSettings, discoveryQueue, showToast, canUseAISearch]);
 
   // Filtering
   const filtered = useMemo(() => shows.filter(s => {
@@ -331,6 +359,41 @@ export default function EventTracker() {
     if (hrs < 24) return `${hrs}h ago`;
     return `${Math.floor(hrs / 24)}d ago`;
   };
+
+  // Auto-search on app open
+  useEffect(() => {
+    if (loading || autoSearchDone) return;
+    if (settings.autoSearchFrequency === 'off') { setAutoSearchDone(true); return; }
+
+    const freqMs = {
+      daily: 24 * 60 * 60 * 1000,
+      '3days': 3 * 24 * 60 * 60 * 1000,
+      weekly: 7 * 24 * 60 * 60 * 1000,
+    };
+
+    const interval = freqMs[settings.autoSearchFrequency];
+    if (!interval) { setAutoSearchDone(true); return; }
+
+    const lastAuto = settings.lastAutoSearch || 0;
+    if (Date.now() - lastAuto < interval) { setAutoSearchDone(true); return; }
+
+    // Time to auto-search
+    setAutoSearchDone(true);
+    const types = settings.autoSearchTypes || 'ticketmaster';
+
+    (async () => {
+      if (types === 'ticketmaster' || types === 'both') {
+        try { await runDiscovery(); } catch { /* silent */ }
+      }
+      if (types === 'ai' || types === 'both') {
+        if (canUseAISearch()) {
+          try { await runAISearch(true); } catch { /* silent */ }
+        }
+      }
+      persistSettings({ ...settings, lastAutoSearch: Date.now() });
+      showToast('Auto-search complete');
+    })();
+  }, [loading, autoSearchDone, settings, runDiscovery, runAISearch, canUseAISearch, persistSettings, showToast]);
 
   if (loading) {
     return (
@@ -536,6 +599,20 @@ export default function EventTracker() {
           settings={settings}
           persistSettings={persistSettings}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {/* AI Limit Modal */}
+      {showAILimit && (
+        <AILimitModal
+          nextAvailable={nextAISearchAvailable()}
+          onClose={() => setShowAILimit(false)}
+          onSaveKey={(key) => {
+            persistSettings({ ...settings, userGeminiKey: key });
+            setShowAILimit(false);
+            // Trigger search with the new key
+            setTimeout(() => runAISearch(true), 100);
+          }}
         />
       )}
     </div>

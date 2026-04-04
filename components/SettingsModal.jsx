@@ -1,14 +1,30 @@
 'use client';
 
-import { X, HelpCircle, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { X, HelpCircle, MapPin, Sparkles, Eye, EyeOff, RefreshCw, ExternalLink } from 'lucide-react';
+
+const FREQUENCY_OPTIONS = [
+  { value: 'off', label: 'Off' },
+  { value: 'daily', label: 'Daily' },
+  { value: '3days', label: 'Every 3 Days' },
+  { value: 'weekly', label: 'Weekly' },
+];
+
+const SEARCH_TYPE_OPTIONS = [
+  { value: 'ticketmaster', label: 'Ticketmaster Only' },
+  { value: 'both', label: 'Ticketmaster + AI' },
+  { value: 'ai', label: 'AI Only' },
+];
 
 export default function SettingsModal({ settings, persistSettings, onClose }) {
+  const [showKey, setShowKey] = useState(false);
+
   return (
     <div className="fixed inset-0 flex items-end justify-center z-50"
          style={{ background: 'rgba(0,0,0,0.7)' }}
          onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
-           className="w-full max-w-[500px]"
+           className="w-full max-w-[500px] max-h-[85vh] overflow-auto"
            style={{ background: '#12101f', borderRadius: '16px 16px 0 0', border: '1px solid #1e1b30', borderBottom: 'none' }}>
         {/* Header */}
         <div className="px-4 py-3.5 flex justify-between items-center" style={{ borderBottom: '1px solid #1e1b30' }}>
@@ -69,7 +85,7 @@ export default function SettingsModal({ settings, persistSettings, onClose }) {
           </div>
 
           <div className="text-xs" style={{ color: '#475569' }}>
-            Events sync with known start time + 4hr duration. Unknown times become all-day events. Changing the calendar name and resetting the link will create a new calendar on the next sync.
+            Events sync with known start time + 4hr duration. Unknown times become all-day events.
           </div>
 
           {/* Location settings */}
@@ -104,9 +120,82 @@ export default function SettingsModal({ settings, persistSettings, onClose }) {
                        style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
               </div>
             </div>
-            <div className="text-[11px]" style={{ color: '#475569' }}>
-              Used for Discover searches. Default: New York, NY, 25 miles.
+          </div>
+
+          {/* Auto-Search */}
+          <div>
+            <div className="text-[13px] font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
+              <RefreshCw size={14} /> Auto-Search
             </div>
+            <div className="text-[11px] mb-2" style={{ color: '#475569' }}>
+              Automatically search for new events when you open the app.
+            </div>
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1">
+                <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Frequency</label>
+                <select value={settings.autoSearchFrequency || 'off'}
+                        onChange={e => persistSettings({ ...settings, autoSearchFrequency: e.target.value })}
+                        className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none appearance-auto"
+                        style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }}>
+                  {FREQUENCY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Search Type</label>
+                <select value={settings.autoSearchTypes || 'ticketmaster'}
+                        onChange={e => persistSettings({ ...settings, autoSearchTypes: e.target.value })}
+                        className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none appearance-auto"
+                        style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }}>
+                  {SEARCH_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Search / Gemini Key */}
+          <div>
+            <div className="text-[13px] font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#94a3b8' }}>
+              <Sparkles size={14} /> AI Search
+            </div>
+            <div className="text-[11px] mb-2" style={{ color: '#475569' }}>
+              AI search uses Google Gemini to find events across RA, DICE, edmtrain, and venue sites. You get <strong style={{ color: '#a78bfa' }}>1 free AI search per week</strong>. Add your own Gemini key for unlimited searches.
+            </div>
+            <div className="mb-2">
+              <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>
+                Your Gemini API Key (optional — for unlimited AI searches)
+              </label>
+              <div className="flex gap-1 items-center">
+                <input type={showKey ? 'text' : 'password'}
+                       value={settings.userGeminiKey || ''}
+                       onChange={e => persistSettings({ ...settings, userGeminiKey: e.target.value || null })}
+                       placeholder="AIza..."
+                       className="flex-1 px-2.5 py-2 rounded-lg text-[13px] outline-none"
+                       style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+                <button onClick={() => setShowKey(!showKey)}
+                        className="bg-transparent border-none cursor-pointer p-1.5" style={{ color: '#64748b' }}>
+                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+                {settings.userGeminiKey && (
+                  <button onClick={() => persistSettings({ ...settings, userGeminiKey: null })}
+                          className="bg-transparent border-none cursor-pointer p-1" style={{ color: '#64748b' }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <a href="https://aistudio.google.com/apikey"
+               target="_blank"
+               rel="noopener noreferrer"
+               className="flex items-center gap-1.5 text-[11px] no-underline"
+               style={{ color: '#a78bfa' }}>
+              <ExternalLink size={11} />
+              Get a free Gemini API key (30 seconds, no credit card)
+            </a>
+            {settings.userGeminiKey && (
+              <div className="mt-1.5 text-[11px] flex items-center gap-1" style={{ color: '#10b981' }}>
+                &#10003; Your key is active — unlimited AI searches
+              </div>
+            )}
           </div>
 
           {/* Show Setup Guide */}

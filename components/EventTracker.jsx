@@ -454,7 +454,9 @@ export default function EventTracker() {
                   style={{ background: 'linear-gradient(90deg, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Automated Event Tracker
               </h1>
-              <div className="text-[11px] mt-0.5" style={{ color: '#64748b' }}>{shows.length} shows tracked</div>
+              <div className="text-[11px] mt-0.5" style={{ color: '#64748b' }}>
+                {shows.length} shows tracked · {settings.city || 'New York'}{settings.stateCode ? `, ${settings.stateCode}` : ''}
+              </div>
             </div>
           </div>
           <div className="flex gap-[5px]">

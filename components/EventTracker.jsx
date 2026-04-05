@@ -14,6 +14,8 @@ import EditModal from './EditModal';
 import SettingsModal from './SettingsModal';
 import DiscoveryQueue from './DiscoveryQueue';
 import AILimitModal from './AILimitModal';
+import SyncProgressModal from './SyncProgressModal';
+import { isConnected, syncShowToCalendar, deleteShowFromCalendar, syncAllShows } from '@/lib/calendar';
 
 const AI_SEARCH_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -53,6 +55,11 @@ export default function EventTracker() {
   const [aiStatus, setAiStatus] = useState('');
   const [showAILimit, setShowAILimit] = useState(false);
 
+  // Calendar sync state
+  const [syncingShowIds, setSyncingShowIds] = useState(new Set());
+  const [bulkSyncProgress, setBulkSyncProgress] = useState(null);
+  const [isBulkSyncing, setIsBulkSyncing] = useState(false);
+
   const showToast = useCallback((msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -64,8 +71,29 @@ export default function EventTracker() {
   useEffect(() => {
     (async () => {
       try {
-        const [loadedShows, loadedSettings] = await Promise.all([getAllShows(), getSettings()]);
+        let [loadedShows, loadedSettings] = await Promise.all([getAllShows(), getSettings()]);
         setShows(loadedShows || []);
+
+        // Check for Google OAuth tokens in URL hash
+        if (typeof window !== 'undefined' && window.location.hash) {
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+
+          if (params.get('google_tokens')) {
+            try {
+              const tokens = JSON.parse(atob(params.get('google_tokens')));
+              loadedSettings = { ...loadedSettings, googleTokens: tokens };
+              await persistSettingsDB(loadedSettings);
+              window.history.replaceState(null, '', window.location.pathname);
+            } catch (e) {
+              console.error('Failed to parse Google tokens:', e);
+            }
+          } else if (params.get('google_error')) {
+            console.error('Google OAuth error:', params.get('google_error'));
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+
         setSettings(loadedSettings);
       } catch (e) {
         console.error('Failed to load data:', e);
@@ -87,20 +115,32 @@ export default function EventTracker() {
   }, []);
 
   // CRUD
-  const saveShow = useCallback((show) => {
+  const saveShow = useCallback(async (show) => {
     if (show.id && shows.find(s => s.id === show.id)) {
       persist(shows.map(s => s.id === show.id ? show : s));
+      // Auto-update calendar if synced
+      if (show.calendarSynced && show.calendarEventId && isConnected(settings)) {
+        try {
+          const updated = await syncShowToCalendar(show, settings, persistSettings);
+          persist(shows.map(s => s.id === show.id ? updated : s));
+        } catch (e) { console.error('Calendar update failed:', e); }
+      }
     } else {
       persist([...shows, { ...show, id: uid(), calendarSynced: false, calendarEventId: null, lastVerified: null, unverified: false }]);
     }
     setModal(null);
-  }, [shows, persist]);
+  }, [shows, persist, settings, persistSettings]);
 
-  const deleteShow = useCallback((id) => {
+  const deleteShow = useCallback(async (id) => {
     if (!confirm('Delete this show?')) return;
+    const show = shows.find(s => s.id === id);
+    // Auto-delete from calendar if synced
+    if (show?.calendarSynced && show?.calendarEventId && isConnected(settings)) {
+      try { await deleteShowFromCalendar(show, settings, persistSettings); } catch (e) { console.error('Calendar delete failed:', e); }
+    }
     persist(shows.filter(s => s.id !== id));
     setModal(null);
-  }, [shows, persist]);
+  }, [shows, persist, settings, persistSettings]);
 
   const cycleTicket = useCallback((id, newStatus) => {
     if (newStatus) {
@@ -113,16 +153,64 @@ export default function EventTracker() {
     }
   }, [shows, persist]);
 
-  const cycleAttending = useCallback((id, newStatus) => {
-    if (newStatus) {
-      persist(shows.map(x => x.id === id ? { ...x, attending: newStatus } : x));
+  const cycleAttending = useCallback(async (id, newStatus) => {
+    const s = shows.find(x => x.id === id);
+    if (!s) return;
+    const next = newStatus || ATTEND_STATES[(ATTEND_STATES.indexOf(s.attending) + 1) % ATTEND_STATES.length];
+
+    // If changing to "not going" and syncNotGoing is off, remove from calendar
+    if (next === 'not going' && !settings.syncNotGoing && s.calendarSynced && s.calendarEventId && isConnected(settings)) {
+      const cleared = { ...s, attending: next, calendarSynced: false, calendarEventId: null };
+      persist(shows.map(x => x.id === id ? cleared : x));
+      try { await deleteShowFromCalendar(s, settings, persistSettings); } catch (e) { console.error('Calendar delete failed:', e); }
     } else {
-      const s = shows.find(x => x.id === id);
-      if (!s) return;
-      const next = ATTEND_STATES[(ATTEND_STATES.indexOf(s.attending) + 1) % ATTEND_STATES.length];
-      persist(shows.map(x => x.id === id ? { ...x, attending: next } : x));
+      const updated = { ...s, attending: next };
+      persist(shows.map(x => x.id === id ? updated : x));
+      // Auto-update calendar if synced
+      if (s.calendarSynced && s.calendarEventId && isConnected(settings)) {
+        try { await syncShowToCalendar(updated, settings, persistSettings); } catch (e) { console.error('Calendar update failed:', e); }
+      }
     }
-  }, [shows, persist]);
+  }, [shows, persist, settings, persistSettings]);
+
+  // --- CALENDAR SYNC ---
+  const handleSyncShow = useCallback(async (id) => {
+    if (!isConnected(settings)) {
+      showToast('Connect Google Calendar in Settings first');
+      return;
+    }
+    const show = shows.find(s => s.id === id);
+    if (!show) return;
+
+    setSyncingShowIds(prev => new Set(prev).add(id));
+    try {
+      const synced = await syncShowToCalendar(show, settings, persistSettings);
+      persist(shows.map(s => s.id === id ? synced : s));
+      showToast(`${show.artist} synced to calendar`);
+    } catch (err) {
+      showToast(err.message || 'Sync failed');
+    }
+    setSyncingShowIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+  }, [shows, settings, persist, persistSettings, showToast]);
+
+  const handleBulkSync = useCallback(async () => {
+    if (!isConnected(settings)) {
+      showToast('Connect Google Calendar in Settings first');
+      return;
+    }
+    setIsBulkSyncing(true);
+    setBulkSyncProgress({ current: 0, total: 0, results: [] });
+
+    try {
+      const updated = await syncAllShows(shows, settings, persistSettings, (progress) => {
+        setBulkSyncProgress(progress);
+      });
+      persist(updated);
+    } catch (err) {
+      showToast(err.message || 'Bulk sync failed');
+    }
+    setIsBulkSyncing(false);
+  }, [shows, settings, persist, persistSettings, showToast]);
 
   // --- DISCOVERY ---
   const runDiscovery = useCallback(async () => {
@@ -465,11 +553,12 @@ export default function EventTracker() {
                     style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#94a3b8' }}>
               <Settings size={16} />
             </button>
-            <button onClick={() => showToast('Calendar sync coming soon!')}
+            <button onClick={handleBulkSync}
+                    disabled={isBulkSyncing}
                     className="flex items-center gap-[3px] rounded-lg px-2.5 py-2 text-xs font-semibold cursor-pointer border-none text-white"
-                    style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-              <CalendarPlus size={14} />
-              {unsyncedCount > 0 && (
+                    style={{ background: isBulkSyncing ? '#1a1625' : 'linear-gradient(135deg, #f59e0b, #d97706)', opacity: isBulkSyncing ? 0.6 : 1 }}>
+              {isBulkSyncing ? <Loader size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
+              {!isBulkSyncing && unsyncedCount > 0 && (
                 <span className="rounded-lg px-[5px] text-[10px]" style={{ background: 'rgba(255,255,255,0.2)' }}>{unsyncedCount}</span>
               )}
             </button>
@@ -611,7 +700,8 @@ export default function EventTracker() {
           onShowClick={(s) => setModal({ ...s })}
           onCycleAttending={cycleAttending}
           onCycleTicket={cycleTicket}
-          syncingShowIds={new Set()}
+          onSyncShow={handleSyncShow}
+          syncingShowIds={syncingShowIds}
         />
       )}
 
@@ -626,6 +716,8 @@ export default function EventTracker() {
           onSave={saveShow}
           onDelete={deleteShow}
           isExisting={!!(modal.id && shows.find(s => s.id === modal.id))}
+          onSyncShow={handleSyncShow}
+          syncing={syncingShowIds.has(modal?.id)}
         />
       )}
 
@@ -635,6 +727,15 @@ export default function EventTracker() {
           settings={settings}
           persistSettings={persistSettings}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {/* Sync Progress Modal */}
+      {bulkSyncProgress && (
+        <SyncProgressModal
+          syncing={isBulkSyncing}
+          progress={bulkSyncProgress}
+          onClose={() => setBulkSyncProgress(null)}
         />
       )}
 

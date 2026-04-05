@@ -1,13 +1,13 @@
 'use client';
 
-import { X, Save, CalendarPlus, CalendarCheck2, Trash2 } from 'lucide-react';
+import { X, Save, CalendarPlus, CalendarCheck2, Trash2, Loader } from 'lucide-react';
 import {
   ATTEND_STATES, ATTEND_LABELS, ATTEND_INLINE_COLORS,
   TICKET_STATES, TICKET_LABELS, TICKET_INLINE_COLORS,
   SOURCE_LABELS,
 } from '@/lib/utils';
 
-export default function EditModal({ show, setModal, onSave, onDelete, isExisting }) {
+export default function EditModal({ show, setModal, onSave, onDelete, isExisting, onSyncShow, syncing }) {
   const modal = show;
   const sourceInfo = SOURCE_LABELS[modal.source] || SOURCE_LABELS.manual;
 
@@ -172,9 +172,11 @@ export default function EditModal({ show, setModal, onSave, onDelete, isExisting
               {modal.calendarSynced ? 'Save & Update Cal' : 'Save'}
             </button>
             {isExisting && !modal.calendarSynced && (
-              <button className="py-2.5 px-3 rounded-[10px] text-[13px] font-semibold cursor-pointer flex items-center gap-1"
-                      style={{ background: '#422006', border: '1px solid #f59e0b', color: '#f59e0b' }}>
-                <CalendarPlus size={14} /> Sync
+              <button onClick={() => { setModal(null); onSyncShow?.(modal.id); }}
+                      disabled={syncing}
+                      className="py-2.5 px-3 rounded-[10px] text-[13px] font-semibold cursor-pointer flex items-center gap-1"
+                      style={{ background: '#422006', border: '1px solid #f59e0b', color: '#f59e0b', opacity: syncing ? 0.6 : 1 }}>
+                {syncing ? <Loader size={14} className="animate-spin" /> : <CalendarPlus size={14} />} Sync
               </button>
             )}
             {isExisting && modal.calendarSynced && (

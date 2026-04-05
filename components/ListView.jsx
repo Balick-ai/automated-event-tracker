@@ -8,7 +8,7 @@ import {
   SOURCE_LABELS, formatDate, showTimeStr,
 } from '@/lib/utils';
 
-export default function ListView({ shows, onShowClick, onCycleAttending, onCycleTicket, syncingShowIds }) {
+export default function ListView({ shows, onShowClick, onCycleAttending, onCycleTicket, onSyncShow, syncingShowIds }) {
   const sorted = useMemo(() => [...shows].sort((a, b) => a.date.localeCompare(b.date)), [shows]);
 
   if (sorted.length === 0) {
@@ -55,9 +55,11 @@ export default function ListView({ shows, onShowClick, onCycleAttending, onCycle
               </div>
               <div className="flex gap-1 shrink-0">
                 {!s.calendarSynced && (
-                  <button className="flex items-center rounded-md p-[4px_6px] cursor-pointer border-none"
-                          style={{ background: '#422006', color: '#f59e0b' }}>
-                    <CalendarPlus size={14} />
+                  <button onClick={() => onSyncShow?.(s.id)}
+                          disabled={syncingShowIds.has(s.id)}
+                          className="flex items-center rounded-md p-[4px_6px] cursor-pointer border-none"
+                          style={{ background: '#422006', color: '#f59e0b', opacity: syncingShowIds.has(s.id) ? 0.6 : 1 }}>
+                    {syncingShowIds.has(s.id) ? <Loader size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
                   </button>
                 )}
                 <button onClick={() => onShowClick(s)}

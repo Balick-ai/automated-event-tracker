@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { X, HelpCircle, MapPin, Sparkles, Eye, EyeOff, RefreshCw, ExternalLink } from 'lucide-react';
+import { X, HelpCircle, MapPin, Sparkles, Eye, EyeOff, RefreshCw, ExternalLink, CalendarCheck2, LogOut } from 'lucide-react';
+import { isConnected } from '@/lib/calendar';
 
 const FREQUENCY_OPTIONS = [
   { value: 'off', label: 'Off' },
@@ -35,31 +36,63 @@ export default function SettingsModal({ settings, persistSettings, onClose }) {
         </div>
 
         <div className="p-4 flex flex-col gap-4">
-          {/* Calendar name */}
+          {/* Google Calendar connection */}
           <div>
             <div className="text-[13px] font-semibold mb-2" style={{ color: '#94a3b8' }}>Google Calendar</div>
-            <div className="mb-2">
-              <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Calendar Name</label>
-              <input value={settings.calendarName || ''}
-                     onChange={e => persistSettings({ ...settings, calendarName: e.target.value })}
-                     placeholder="Automated Event Tracker"
-                     className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
-                     style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-xs" style={{ color: settings.calendarId ? '#10b981' : '#64748b' }}>
-                {settings.calendarId
-                  ? `Linked: ${settings.calendarName || 'Automated Event Tracker'}`
-                  : 'Not linked yet — will create on first sync'}
-              </div>
-              {settings.calendarId && (
-                <button onClick={() => persistSettings({ ...settings, calendarId: null })}
-                        className="text-[11px] rounded-md px-2 py-[3px] cursor-pointer"
-                        style={{ color: '#ef4444', background: 'none', border: '1px solid #7f1d1d' }}>
-                  Reset Link
+
+            {isConnected(settings) ? (
+              <>
+                <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg" style={{ background: '#064e3b22', border: '1px solid #064e3b' }}>
+                  <CalendarCheck2 size={16} color="#10b981" />
+                  <span className="text-xs font-medium" style={{ color: '#10b981' }}>Google Calendar Connected</span>
+                  <button onClick={() => persistSettings({ ...settings, googleTokens: null, calendarId: null })}
+                          className="ml-auto flex items-center gap-1 text-[11px] rounded-md px-2 py-[3px] cursor-pointer"
+                          style={{ color: '#ef4444', background: 'none', border: '1px solid #7f1d1d' }}>
+                    <LogOut size={11} /> Disconnect
+                  </button>
+                </div>
+                <div className="mb-2">
+                  <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Calendar Name</label>
+                  <input value={settings.calendarName || ''}
+                         onChange={e => persistSettings({ ...settings, calendarName: e.target.value })}
+                         placeholder="Automated Event Tracker"
+                         className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
+                         style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs" style={{ color: settings.calendarId ? '#10b981' : '#64748b' }}>
+                    {settings.calendarId
+                      ? `Calendar: ${settings.calendarName || 'Automated Event Tracker'}`
+                      : 'Calendar will be created on first sync'}
+                  </div>
+                  {settings.calendarId && (
+                    <button onClick={() => persistSettings({ ...settings, calendarId: null })}
+                            className="text-[11px] rounded-md px-2 py-[3px] cursor-pointer"
+                            style={{ color: '#f59e0b', background: 'none', border: '1px solid #92400e' }}>
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-[11px] mb-2" style={{ color: '#475569' }}>
+                  Connect your Google account to sync shows to a dedicated calendar.
+                </div>
+                <button onClick={async () => {
+                          try {
+                            const res = await fetch('/api/auth/google');
+                            const data = await res.json();
+                            if (data.url) window.location.href = data.url;
+                            else alert('Google OAuth not configured');
+                          } catch { alert('Failed to start Google sign-in'); }
+                        }}
+                        className="w-full py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer border-none text-white flex items-center justify-center gap-2"
+                        style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
+                  <CalendarCheck2 size={16} /> Connect Google Calendar
                 </button>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           {/* Sync not going toggle */}

@@ -45,6 +45,7 @@ export default function EventTracker() {
   const [searchBanner, setSearchBanner] = useState(null);
   const [searchDateFrom, setSearchDateFrom] = useState('');
   const [searchDateTo, setSearchDateTo] = useState('');
+  const [showDateTip, setShowDateTip] = useState(false);
 
   // Discovery state
   const [discovering, setDiscovering] = useState(false);
@@ -688,15 +689,18 @@ export default function EventTracker() {
               </button>
             </div>
           ) : (
-            <div className="relative ml-auto group">
-              <button className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer border-none"
-                      style={{ background: '#2d2640', color: '#94a3b8' }}>
+            <div className="relative ml-auto">
+              <button onClick={() => setShowDateTip(!showDateTip)}
+                      className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer border-none"
+                      style={{ background: showDateTip ? '#7c3aed' : '#2d2640', color: showDateTip ? '#fff' : '#94a3b8' }}>
                 i
               </button>
-              <div className="absolute bottom-full right-0 mb-1.5 px-3 py-2 rounded-lg text-[11px] leading-snug w-[200px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                   style={{ background: '#1e1635', border: '1px solid #7c3aed', color: '#e2e8f0' }}>
-                Optional date range filter. If no dates are set, searches default to 6 months in advance.
-              </div>
+              {showDateTip && (
+                <div className="absolute bottom-full right-0 mb-1.5 px-3 py-2 rounded-lg text-[11px] leading-snug w-[200px] z-10"
+                     style={{ background: '#1e1635', border: '1px solid #7c3aed', color: '#e2e8f0' }}>
+                  Optional date range filter. If no dates are set, searches default to 6 months in advance.
+                </div>
+              )}
             </div>
           )}
         </div>

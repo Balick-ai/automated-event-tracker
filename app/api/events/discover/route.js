@@ -1,22 +1,5 @@
 import { NextResponse } from 'next/server';
-
-// Known NYC electronic music venues — Ticketmaster venue IDs
-const NYC_EDM_VENUES = [
-  { id: 'KovZ917AOcZ', name: 'Great Hall - Avant Gardner' },
-  { id: 'KovZpZA67IvA', name: 'Kings Hall - Avant Gardner' },
-  { id: 'KovZ917AINX', name: 'The Brooklyn Mirage' },
-  { id: 'Z7r9jZa77t', name: 'Lost Circus - Avant Gardner' },
-  { id: 'KovZpZA6enaA', name: 'Elsewhere' },
-  { id: 'KovZ917AQXF', name: 'Marquee New York' },
-  { id: 'KovZpZAEteAA', name: 'Knockdown Center' },
-  { id: 'KovZpZAEAFnA', name: 'Good Room' },
-  { id: 'Z7r9jZa7rg', name: 'Public Records NYC' },
-  { id: 'KovZpZAFkn6A', name: 'Terminal 5' },
-  { id: 'KovZpa6WFe', name: 'Webster Hall' },
-  { id: 'Z7r9jZa7DH', name: 'H0L0' },
-  { id: 'Z7r9jZa7MU', name: 'Racket NYC' },
-  { id: 'KovZpZAklIaA', name: '99 Scott' },
-];
+import { getVenuesForCity } from '@/lib/venues';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -39,15 +22,16 @@ export async function GET(request) {
 
   try {
     // Run all searches in parallel
-    const isNYC = (city.toLowerCase().includes('new york') || city.toLowerCase().includes('nyc') || city.toLowerCase().includes('brooklyn')) && stateCode === 'NY';
+    const cityVenues = getVenuesForCity(city);
+    const isNYC = (city.toLowerCase().includes('new york') || city.toLowerCase().includes('nyc') || city.toLowerCase().includes('brooklyn'));
 
     const searches = [
       { name: 'Ticketmaster genre', fn: fetchTicketmasterGenre(tmKey, city, stateCode, radius, startDateTime, endDateTime) },
     ];
 
-    // Only run venue-based searches for NYC (venue IDs are NYC-specific)
-    if (isNYC) {
-      searches.push({ name: 'Ticketmaster venues', fn: fetchTicketmasterVenues(tmKey, startDateTime, endDateTime) });
+    // Run venue-based search if we have venues for this city
+    if (cityVenues && cityVenues.length > 0) {
+      searches.push({ name: 'Ticketmaster venues', fn: fetchTicketmasterVenues(tmKey, cityVenues, startDateTime, endDateTime) });
     }
 
     // Add Eventbrite if configured (NYC organizers only for now)
@@ -131,9 +115,9 @@ async function fetchTicketmasterGenre(apiKey, city, stateCode, radius, startDate
 }
 
 // --- Ticketmaster: Venue-based search (no genre filter) ---
-async function fetchTicketmasterVenues(apiKey, startDateTime, endDateTime) {
+async function fetchTicketmasterVenues(apiKey, venues, startDateTime, endDateTime) {
   // Batch venue IDs into groups (TM supports comma-separated venueId)
-  const venueIds = NYC_EDM_VENUES.map(v => v.id).join(',');
+  const venueIds = venues.map(v => v.id).join(',');
   const allEvents = [];
 
   for (let page = 0; page < 2; page++) {

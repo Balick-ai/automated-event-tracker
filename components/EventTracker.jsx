@@ -695,7 +695,7 @@ export default function EventTracker() {
           onClose={() => { setDiscoveryQueue(null); setView('calendar'); }}
           onConfirmStillHappening={confirmStillHappening}
           onRemoveUnverified={removeUnverified}
-          isNYC={(settings.city || 'New York').toLowerCase().includes('new york') || (settings.city || '').toLowerCase().includes('nyc')}
+          hasVenues={(() => { const c = (settings.city || '').toLowerCase(); return ['new york','nyc','brooklyn','los angeles','la','hollywood','miami','chicago','las vegas','vegas','san francisco','sf','denver','detroit','austin','atx','seattle'].some(v => c.includes(v)); })()}
         />
       )}
 

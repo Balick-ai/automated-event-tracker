@@ -16,7 +16,7 @@ export default function DiscoveryQueue({
   onClose,
   onConfirmStillHappening,
   onRemoveUnverified,
-  isNYC = true,
+  hasVenues = true,
 }) {
   return (
     <div className="p-3 flex flex-col gap-3">
@@ -55,11 +55,11 @@ export default function DiscoveryQueue({
         )}
 
         {/* Coverage info */}
-        {!isNYC && (
+        {!hasVenues && (
           <div className="px-3.5 py-2 flex items-start gap-2" style={{ borderBottom: '1px solid #164e63', background: '#0c1a2e' }}>
             <Info size={14} color="#0ea5e9" className="shrink-0 mt-0.5" />
             <div className="text-[11px] leading-snug" style={{ color: '#64748b' }}>
-              Venue-specific search is currently optimized for NYC. Your area uses genre-based search only. Use <span style={{ color: '#a78bfa' }}>AI Search</span> for better coverage in other cities.
+              No venue-specific search available for your city. Results are genre-based only. Use <span style={{ color: '#a78bfa' }}>AI Search</span> for better coverage.
             </div>
           </div>
         )}

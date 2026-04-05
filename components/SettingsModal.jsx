@@ -95,6 +95,97 @@ export default function SettingsModal({ settings, persistSettings, onClose, onSh
             )}
           </div>
 
+          {/* Reminders */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <div className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Event Reminders</div>
+                <div className="text-xs" style={{ color: '#64748b' }}>Get notified before synced events</div>
+              </div>
+              <button onClick={() => persistSettings({ ...settings, reminderEnabled: !settings.reminderEnabled })}
+                      className="relative border-none cursor-pointer shrink-0"
+                      style={{
+                        width: 48, height: 26, borderRadius: 13,
+                        background: settings.reminderEnabled !== false ? '#7c3aed' : '#2d2640',
+                        transition: 'background 0.2s',
+                      }}>
+                <div className="absolute rounded-full bg-white"
+                     style={{
+                       width: 20, height: 20, top: 3,
+                       left: settings.reminderEnabled !== false ? 25 : 3,
+                       transition: 'left 0.2s',
+                     }} />
+              </button>
+            </div>
+            {settings.reminderEnabled !== false && (
+              <>
+                <div className="mb-2">
+                  <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Remind me</label>
+                  <div className="flex gap-1 flex-wrap">
+                    {[
+                      { value: 30, label: '30 min' },
+                      { value: 60, label: '1 hour' },
+                      { value: 180, label: '3 hours' },
+                      { value: 1440, label: '1 day' },
+                      { value: 10080, label: '1 week' },
+                    ].map(opt => {
+                      const active = (settings.reminderMinutes || [1440, 60]).includes(opt.value);
+                      return (
+                        <button key={opt.value}
+                                onClick={() => {
+                                  const current = settings.reminderMinutes || [1440, 60];
+                                  const next = active
+                                    ? current.filter(m => m !== opt.value)
+                                    : [...current, opt.value].sort((a, b) => a - b);
+                                  if (next.length > 0) persistSettings({ ...settings, reminderMinutes: next });
+                                }}
+                                className="px-2.5 py-1 rounded-md text-[11px] font-medium cursor-pointer"
+                                style={{
+                                  border: '1px solid',
+                                  borderColor: active ? '#7c3aed' : '#2d2640',
+                                  background: active ? 'rgba(124,58,237,0.13)' : 'transparent',
+                                  color: active ? '#a78bfa' : '#64748b',
+                                }}>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Notification type</label>
+                  <div className="flex gap-0 rounded-lg overflow-hidden" style={{ border: '1px solid #2d2640' }}>
+                    {[
+                      { value: 'popup', label: 'Popup' },
+                      { value: 'email', label: 'Email' },
+                      { value: 'both', label: 'Both' },
+                    ].map(opt => {
+                      const methods = settings.reminderMethods || ['popup'];
+                      const active =
+                        opt.value === 'both' ? methods.includes('popup') && methods.includes('email') :
+                        opt.value === 'popup' ? methods.includes('popup') && !methods.includes('email') :
+                        methods.includes('email') && !methods.includes('popup');
+                      return (
+                        <button key={opt.value}
+                                onClick={() => {
+                                  const next = opt.value === 'both' ? ['popup', 'email'] : [opt.value];
+                                  persistSettings({ ...settings, reminderMethods: next });
+                                }}
+                                className="flex-1 py-[6px] text-[11px] font-medium cursor-pointer border-none"
+                                style={{
+                                  background: active ? 'rgba(124,58,237,0.13)' : 'transparent',
+                                  color: active ? '#a78bfa' : '#64748b',
+                                }}>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Sync not going toggle */}
           <div className="flex justify-between items-center">
             <div>

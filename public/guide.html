@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDM Event Tracker — Setup & User Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: #0a0a0f; color: #cbd5e1; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .hero { background: linear-gradient(160deg, #1a1025, #0f0a1a 40%, #0a1628); padding: 48px 24px 40px; text-align: center; border-bottom: 1px solid #1e1b30; }
+  .hero h1 { font-size: 28px; font-weight: 800; background: linear-gradient(90deg, #a78bfa, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+  .hero p { font-size: 15px; color: #94a3b8; max-width: 340px; margin: 0 auto; }
+  .badge { display: inline-block; margin-top: 16px; padding: 6px 14px; background: #7c3aed22; border: 1px solid #7c3aed44; border-radius: 20px; font-size: 12px; font-weight: 600; color: #a78bfa; }
+  .content { max-width: 600px; margin: 0 auto; padding: 0 20px; }
+  .section { padding: 36px 0; border-bottom: 1px solid #1a1625; }
+  .section:last-child { border-bottom: none; }
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #7c3aed; margin-bottom: 8px; }
+  h2 { font-size: 22px; font-weight: 800; color: #e2e8f0; margin-bottom: 14px; }
+  h3 { font-size: 16px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+  p { margin-bottom: 12px; font-size: 14px; }
+  .steps { display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+  .step { display: flex; gap: 12px; align-items: flex-start; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .step-num.purple { background: #7c3aed; }
+  .step-num.cyan { background: #0ea5e9; }
+  .step-num.amber { background: #f59e0b; color: #000; }
+  .step-num.pink { background: #ec4899; }
+  .step-text { font-size: 14px; color: #e2e8f0; }
+  .step-sub { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+  .features { display: flex; flex-direction: column; gap: 16px; margin: 16px 0; }
+  .feature { display: flex; gap: 14px; align-items: flex-start; }
+  .feature-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .feature h3 { margin-bottom: 2px; }
+  .feature p { font-size: 13px; color: #94a3b8; margin: 0; }
+  .tip { padding: 14px 16px; background: #0c1a2e; border-left: 3px solid #0ea5e9; border-radius: 0 10px 10px 0; margin: 12px 0; font-size: 13px; color: #94a3b8; }
+  .tip strong { color: #0ea5e9; }
+  .warning { padding: 14px 16px; background: #1a1200; border-left: 3px solid #f59e0b; border-radius: 0 10px 10px 0; margin: 12px 0; font-size: 13px; color: #fbbf24; }
+  .warning strong { color: #f59e0b; }
+  .info-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  .info-table th { text-align: left; padding: 10px 12px; background: #1a1625; color: #a78bfa; font-weight: 600; border-bottom: 1px solid #2d2640; }
+  .info-table td { padding: 10px 12px; border-bottom: 1px solid #1a1625; }
+  .btn-legend { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .btn-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #0f0d1a; border-radius: 10px; border: 1px solid #1a1625; }
+  .btn-sample { padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; flex-shrink: 0; }
+  .btn-desc { font-size: 13px; color: #94a3b8; }
+  .dot-legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+  .dot-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #94a3b8; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .checklist { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .check-item { display: flex; gap: 10px; align-items: flex-start; }
+  .check-icon { width: 20px; height: 20px; border-radius: 50%; background: #10b98122; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #10b981; font-size: 12px; font-weight: 700; }
+  .check-text { font-size: 14px; color: #e2e8f0; }
+  .footer { text-align: center; padding: 32px 24px; border-top: 1px solid #1a1625; font-size: 12px; color: #475569; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div style="width:64px;height:64px;background:linear-gradient(135deg,#a78bfa,#ec4899);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:28px;">&#127925;</div>
+  <h1>EDM Event Tracker</h1>
+  <p>Setup & User Guide</p>
+  <div class="badge">Free &middot; No coding required</div>
+</div>
+
+<div class="content">
+
+  <div class="section">
+    <div class="section-label">Getting Started</div>
+    <h2>Setup in 3 Steps</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num purple">1</div>
+        <div>
+          <div class="step-text">Open the <strong>app link</strong> in your browser</div>
+          <div class="step-sub">Works on any phone or computer. No download needed.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num purple">2</div>
+        <div>
+          <div class="step-text">Go to <strong>Settings</strong> and tap <strong>Connect Google Calendar</strong></div>
+          <div class="step-sub">Sign in with Google to enable calendar sync.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num cyan">3</div>
+        <div>
+          <div class="step-text"><strong>Start discovering events!</strong></div>
+          <div class="step-sub">Tap Discover for instant results, or AI Search for deeper coverage.</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip">
+      <strong>Tip:</strong> Add the app to your home screen for quick access:<br><br>
+      <strong style="color:#e2e8f0">iPhone (Safari only):</strong> Share icon &#8594; "Add to Home Screen"<br>
+      <strong style="color:#e2e8f0">Android (Chrome):</strong> Menu (&#8942;) &#8594; "Add to Home Screen"
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Overview</div>
+    <h2>Three Core Features</h2>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon" style="background:#7c3aed22;">&#128203;</div>
+        <div>
+          <h3>Track</h3>
+          <p>Add shows, mark attendance (Going/Maybe/Not Going), and track ticket status. Switch between calendar and list views.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background:#0ea5e922;">&#128269;</div>
+        <div>
+          <h3>Discover</h3>
+          <p><strong>Discover</strong> searches Ticketmaster + Eventbrite for electronic events. <strong>AI Search</strong> uses Google Gemini to find events on RA, DICE, edmtrain, Songkick, and venue sites.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background:#f59e0b22;">&#128197;</div>
+        <div>
+          <h3>Sync</h3>
+          <p>Push shows to a dedicated Google Calendar. Events include reminders (customizable in Settings).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Searches</div>
+    <h2>Finding Events</h2>
+    <div class="btn-legend">
+      <div class="btn-item">
+        <div class="btn-sample" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);">Discover</div>
+        <div class="btn-desc"><strong style="color:#e2e8f0">Ticketmaster + Eventbrite</strong> &#8212; Fast, free, unlimited. Genre-based + venue-specific search in 10 US cities.</div>
+      </div>
+      <div class="btn-item">
+        <div class="btn-sample" style="background:linear-gradient(135deg,#7c3aed,#ec4899);">AI Search</div>
+        <div class="btn-desc"><strong style="color:#e2e8f0">Google Gemini AI</strong> &#8212; Searches RA, DICE, edmtrain, Songkick, and venue sites. 1 free search/week; add your own Gemini key for unlimited.</div>
+      </div>
+    </div>
+    <p>An optional <strong style="color:#e2e8f0">date range filter</strong> lets you narrow searches to specific dates. Default: next 6 months.</p>
+    <p>Results appear in a <strong style="color:#e2e8f0">Discovery Queue</strong> where you can Add, Edit & Add, or Dismiss each event. "Add All New" bulk-adds everything at once.</p>
+    <div class="tip">
+      <strong>Supported cities for venue search:</strong> New York, Los Angeles, Miami, Chicago, Las Vegas, San Francisco, Denver, Detroit, Austin, Seattle. Other cities get genre-based search + AI Search.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Views</div>
+    <h2>Calendar & List</h2>
+    <p><strong style="color:#e2e8f0">Calendar View</strong> &#8212; Month grid with colored dots on dates that have shows. Tap a date to see details.</p>
+    <div class="dot-legend">
+      <div class="dot-item"><div class="dot" style="background:#34d399"></div> Going</div>
+      <div class="dot-item"><div class="dot" style="background:#fbbf24"></div> Maybe</div>
+      <div class="dot-item"><div class="dot" style="background:#64748b"></div> Undecided</div>
+      <div class="dot-item"><div class="dot" style="background:#f87171"></div> Not Going</div>
+    </div>
+    <p><strong style="color:#e2e8f0">List View</strong> &#8212; All shows sorted by date with segmented status buttons. Tap any option to set it directly &#8212; no cycling needed.</p>
+    <p>Each show displays its <strong style="color:#e2e8f0">source</strong> (Ticketmaster, Eventbrite, AI Search, or Manual) so you know where it came from.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Google Calendar</div>
+    <h2>Syncing Events</h2>
+    <p>The app creates a dedicated <strong style="color:#f59e0b">EDM Event Tracker</strong> calendar (customizable name).</p>
+    <table class="info-table">
+      <tr><th>Your Status</th><th>Calendar Event</th></tr>
+      <tr><td>Going</td><td>Confirmed event</td></tr>
+      <tr><td>Maybe / Undecided</td><td>Tentative event</td></tr>
+      <tr><td>Not Going</td><td>Skipped (unless enabled in Settings)</td></tr>
+    </table>
+    <table class="info-table">
+      <tr><th>Time Info</th><th>Calendar Result</th></tr>
+      <tr><td>Start + end time</td><td>Timed event</td></tr>
+      <tr><td>Start time only</td><td>4-hour duration</td></tr>
+      <tr><td>No times</td><td>All-day event</td></tr>
+    </table>
+    <p><strong style="color:#e2e8f0">Reminders:</strong> Customizable in Settings &#8212; choose popup, email, or both, with timing options (30 min, 1 hour, 3 hours, 1 day, 1 week before).</p>
+    <p>Editing a synced show auto-updates the calendar event. Deleting a synced show removes it from the calendar.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Important</div>
+    <h2>Your Data</h2>
+    <div class="warning">
+      <strong>Your shows are stored in your browser.</strong> There are no accounts and no server database. <strong>Clearing your browser data or cache will delete your shows.</strong>
+    </div>
+    <p><strong style="color:#10b981">Google Calendar is your backup.</strong> Once shows are synced, they persist in your Google Calendar even if browser data is cleared. Sync regularly to keep your events safe.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Security</div>
+    <h2>Privacy</h2>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon">&#10003;</div><div class="check-text">Your shows are stored privately on your device</div></div>
+      <div class="check-item"><div class="check-icon">&#10003;</div><div class="check-text">No shared database &#8212; data lives in your browser only</div></div>
+      <div class="check-item"><div class="check-icon">&#10003;</div><div class="check-text">Google Calendar connects through your own account</div></div>
+      <div class="check-item"><div class="check-icon">&#10003;</div><div class="check-text">The app creator has no access to your data</div></div>
+      <div class="check-item"><div class="check-icon">&#10003;</div><div class="check-text">Discovery searches use free APIs &#8212; no personal data shared</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Settings</div>
+    <h2>Configuration</h2>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon" style="background:#f59e0b22;">&#128197;</div>
+        <div><h3>Google Calendar</h3><p>Connect/disconnect, set calendar name, configure reminders.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background:#0ea5e922;">&#128205;</div>
+        <div><h3>Discovery Location</h3><p>Set your city, state, and search radius.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background:#7c3aed22;">&#128260;</div>
+        <div><h3>Auto-Search</h3><p>Automatically search for new events when you open the app. Choose frequency and search type.</p></div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon" style="background:#ec489922;">&#10024;</div>
+        <div><h3>AI Search</h3><p>1 free AI search per week. Add your own Gemini API key for unlimited searches.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">FAQ</div>
+    <h2>Common Questions</h2>
+    <p><strong style="color:#e2e8f0">Is this free?</strong></p>
+    <p>Yes. All features are free. AI Search has a weekly limit but you can add your own free Gemini key for unlimited use.</p>
+    <p><strong style="color:#e2e8f0">Does my data persist?</strong></p>
+    <p>Yes, across sessions. But clearing browser data deletes everything. Sync to Google Calendar as a backup.</p>
+    <p><strong style="color:#e2e8f0">Can others see my shows?</strong></p>
+    <p>No. Each person has their own private data in their browser.</p>
+    <p><strong style="color:#e2e8f0">What if a show isn't found?</strong></p>
+    <p>Add it manually with the + button. Not all events are on Ticketmaster &#8212; AI Search catches more, and you can always add from flyers or social media.</p>
+    <p><strong style="color:#e2e8f0">My city isn't supported for venue search?</strong></p>
+    <p>Genre-based search works everywhere. AI Search also works for any city. Only venue-specific search is limited to supported cities.</p>
+  </div>
+
+</div>
+
+<div class="footer">EDM Event Tracker &middot; Your data stays yours</div>
+
+</body>
+</html>

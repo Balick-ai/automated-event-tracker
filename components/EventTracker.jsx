@@ -17,6 +17,7 @@ import AILimitModal from './AILimitModal';
 import SyncProgressModal from './SyncProgressModal';
 import OnboardingModal from './OnboardingModal';
 import { isConnected, syncShowToCalendar, deleteShowFromCalendar, syncAllShows } from '@/lib/calendar';
+import { getVenuesForCity } from '@/lib/venues';
 
 const AI_SEARCH_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -741,7 +742,7 @@ export default function EventTracker() {
           onClose={() => { setDiscoveryQueue(null); setView('calendar'); }}
           onConfirmStillHappening={confirmStillHappening}
           onRemoveUnverified={removeUnverified}
-          hasVenues={(() => { const c = (settings.city || '').toLowerCase(); return ['new york','nyc','brooklyn','los angeles','la','hollywood','miami','chicago','las vegas','vegas','san francisco','sf','denver','detroit','austin','atx','seattle'].some(v => c.includes(v)); })()}
+          hasVenues={!!getVenuesForCity(settings.city)}
         />
       )}
 

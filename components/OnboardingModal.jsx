@@ -95,7 +95,69 @@ const SCREENS = [
     );
   },
 
-  // 3: Connect Google Calendar (interactive)
+  // 3: AI Search + Gemini Key
+  function AISearch() {
+    return (
+      <div className="px-6 flex-1">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.2))' }}>
+            <Sparkles size={22} color="#a78bfa" />
+          </div>
+          <h2 className="text-xl font-bold m-0" style={{ color: '#e2e8f0' }}>AI Search</h2>
+        </div>
+        <p className="text-sm mb-3" style={{ color: '#94a3b8' }}>
+          The <strong style={{ color: '#a78bfa' }}>AI Search</strong> button uses Google Gemini to find events on Resident Advisor, DICE, edmtrain, Songkick, and venue websites &mdash; events that Ticketmaster misses.
+        </p>
+        <div className="p-3 rounded-xl mb-4" style={{ background: '#1a1625' }}>
+          <div className="text-[13px] font-semibold mb-1" style={{ color: '#e2e8f0' }}>You get 1 free AI search per week</div>
+          <div className="text-[12px]" style={{ color: '#94a3b8' }}>
+            Want unlimited? Add your own free Gemini API key:
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2.5 mb-3">
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#ec4899', color: '#fff' }}>1</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>
+              Go to{' '}
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
+                 style={{ color: '#a78bfa', textDecoration: 'underline', fontWeight: 600 }}>
+                aistudio.google.com/apikey
+              </a>
+            </div>
+          </div>
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#ec4899', color: '#fff' }}>2</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>
+              Click <strong>Create API Key</strong> (no credit card needed)
+            </div>
+          </div>
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#ec4899', color: '#fff' }}>3</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>
+              Copy the key (starts with <code className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#12101f', color: '#a78bfa' }}>AIza...</code>)
+            </div>
+          </div>
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#ec4899', color: '#fff' }}>4</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>
+              Paste in <strong>Settings</strong> &rarr; <strong>AI Search</strong> &rarr; <strong>Your Gemini API Key</strong>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-[11px]" style={{ color: '#475569' }}>
+          This is optional &mdash; you can always do it later in Settings. Your key stays in your browser and is never shared.
+        </p>
+      </div>
+    );
+  },
+
+  // 4: Connect Google Calendar (interactive)
   function ConnectCalendar() {
     return (
       <div className="px-6 flex-1">

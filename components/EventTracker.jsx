@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader, Sparkles } from 'lucide-react';
+import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader, Sparkles, CalendarRange, X, Info } from 'lucide-react';
 import { getAllShows, saveAllShows, getSettings, saveSettings as persistSettingsDB } from '@/lib/db';
 import {
   uid, TICKET_STATES, ATTEND_STATES, ATTEND_LABELS,
@@ -42,6 +42,9 @@ export default function EventTracker() {
   const [searchText, setSearchText] = useState('');
   const [toast, setToast] = useState(null);
   const [searchBanner, setSearchBanner] = useState(null);
+  const [searchDateFrom, setSearchDateFrom] = useState('');
+  const [searchDateTo, setSearchDateTo] = useState('');
+  const [showDateRange, setShowDateRange] = useState(false);
 
   // Discovery state
   const [discovering, setDiscovering] = useState(false);
@@ -235,6 +238,8 @@ export default function EventTracker() {
         stateCode: settings.stateCode || 'NY',
         radius: String(settings.radius || 25),
       });
+      if (searchDateFrom) params.set('dateFrom', searchDateFrom);
+      if (searchDateTo) params.set('dateTo', searchDateTo);
 
       const res = await fetch(`/api/events/discover?${params}`);
       if (!res.ok) {
@@ -373,6 +378,8 @@ export default function EventTracker() {
           city: settings.city || 'New York',
           stateCode: settings.stateCode || 'NY',
           geminiKey: settings.userGeminiKey || undefined,
+          dateFrom: searchDateFrom || undefined,
+          dateTo: searchDateTo || undefined,
         }),
       });
       if (!res.ok) {
@@ -613,38 +620,75 @@ export default function EventTracker() {
         )}
       </div>
 
-      {/* Searches bar — inline with view toggle, right-aligned */}
-      <div className="px-4 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid #1e1b30', background: '#0d0b18' }}>
-        <div className="flex gap-1.5 items-center">
-          <button onClick={runDiscovery}
-                  disabled={discovering || aiSearching}
-                  className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer border-none text-white"
-                  style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
-            {discovering ? <Loader size={12} className="animate-spin" /> : <Globe size={12} />}
-            Discover
-          </button>
-          <button onClick={runAISearch}
-                  disabled={aiSearching || discovering}
-                  className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer border-none text-white"
-                  style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
-            {aiSearching ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            AI Search
-          </button>
-          {discoveryQueue && !discovering && !aiSearching && (
-            <button onClick={() => { setView('queue'); setSearchBanner(null); }}
-                    className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-medium cursor-pointer"
-                    style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#e2e8f0' }}>
-              Results
-              {newCount > 0 && (
-                <span className="rounded-full px-[5px] text-[9px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
-              )}
+      {/* Searches bar */}
+      <div className="px-4 py-2" style={{ borderBottom: '1px solid #1e1b30', background: '#0d0b18' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1.5 items-center">
+            <button onClick={runDiscovery}
+                    disabled={discovering || aiSearching}
+                    className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer border-none text-white"
+                    style={{ background: discovering ? '#1a1625' : 'linear-gradient(135deg, #0ea5e9, #06b6d4)', opacity: (discovering || aiSearching) ? 0.6 : 1 }}>
+              {discovering ? <Loader size={12} className="animate-spin" /> : <Globe size={12} />}
+              Discover
             </button>
+            <button onClick={runAISearch}
+                    disabled={aiSearching || discovering}
+                    className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer border-none text-white"
+                    style={{ background: aiSearching ? '#1a1625' : 'linear-gradient(135deg, #7c3aed, #ec4899)', opacity: (aiSearching || discovering) ? 0.6 : 1 }}>
+              {aiSearching ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              AI Search
+            </button>
+            <button onClick={() => setShowDateRange(!showDateRange)}
+                    className="flex items-center rounded-lg px-1.5 py-1 text-[11px] cursor-pointer"
+                    style={{ background: showDateRange || searchDateFrom || searchDateTo ? '#7c3aed' : '#1a1625', border: '1px solid #2d2640', color: showDateRange || searchDateFrom || searchDateTo ? '#fff' : '#64748b' }}>
+              <CalendarRange size={12} />
+            </button>
+            {discoveryQueue && !discovering && !aiSearching && (
+              <button onClick={() => { setView('queue'); setSearchBanner(null); }}
+                      className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-medium cursor-pointer"
+                      style={{ background: view === 'queue' ? '#0ea5e9' : '#1a1625', border: '1px solid #2d2640', color: view === 'queue' ? '#fff' : '#e2e8f0' }}>
+                Results
+                {newCount > 0 && (
+                  <span className="rounded-full px-[5px] text-[9px] font-bold text-white" style={{ background: '#0ea5e9' }}>{newCount}</span>
+                )}
+              </button>
+            )}
+          </div>
+          {lastSearched && !discovering && !aiSearching && (
+            <span className="text-[10px]" style={{ color: '#475569' }}>
+              {timeAgoStr(lastSearched)}
+            </span>
           )}
         </div>
-        {lastSearched && !discovering && !aiSearching && (
-          <span className="text-[10px]" style={{ color: '#475569' }}>
-            {timeAgoStr(lastSearched)}
-          </span>
+
+        {/* Date range filter */}
+        {showDateRange && (
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>From</label>
+              <input type="date" value={searchDateFrom}
+                     onChange={e => setSearchDateFrom(e.target.value)}
+                     className="px-2 py-1 rounded-md text-[11px] outline-none"
+                     style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>To</label>
+              <input type="date" value={searchDateTo}
+                     onChange={e => setSearchDateTo(e.target.value)}
+                     className="px-2 py-1 rounded-md text-[11px] outline-none"
+                     style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+            </div>
+            {(searchDateFrom || searchDateTo) && (
+              <button onClick={() => { setSearchDateFrom(''); setSearchDateTo(''); }}
+                      className="bg-transparent border-none cursor-pointer p-0.5" style={{ color: '#64748b' }}>
+                <X size={12} />
+              </button>
+            )}
+            <span className="text-[10px] flex items-center gap-0.5 ml-auto" style={{ color: '#475569' }}>
+              <Info size={10} />
+              {searchDateFrom || searchDateTo ? 'Custom range active' : 'Default: next 6 months'}
+            </span>
+          </div>
         )}
       </div>
 

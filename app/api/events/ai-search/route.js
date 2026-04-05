@@ -16,9 +16,9 @@ export async function POST(request) {
   }
 
   const now = new Date();
-  const startDate = now.toISOString().split('T')[0];
-  const endDate = new Date(now);
-  endDate.setMonth(endDate.getMonth() + 6);
+  const startDate = body.dateFrom || now.toISOString().split('T')[0];
+  const endDate = body.dateTo ? new Date(body.dateTo) : new Date(now);
+  if (!body.dateTo) endDate.setMonth(endDate.getMonth() + 6);
   const endDateStr = endDate.toISOString().split('T')[0];
 
   const location = stateCode ? `${city}, ${stateCode}` : city;

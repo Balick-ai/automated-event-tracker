@@ -14,10 +14,15 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Ticketmaster API key not configured' }, { status: 500 });
   }
 
+  const dateFrom = searchParams.get('dateFrom');
+  const dateTo = searchParams.get('dateTo');
+
   const now = new Date();
-  const startDateTime = now.toISOString().split('.')[0] + 'Z';
-  const endDate = new Date();
-  endDate.setMonth(endDate.getMonth() + 6);
+  const startDateTime = dateFrom
+    ? new Date(dateFrom).toISOString().split('.')[0] + 'Z'
+    : now.toISOString().split('.')[0] + 'Z';
+  const endDate = dateTo ? new Date(dateTo) : new Date();
+  if (!dateTo) endDate.setMonth(endDate.getMonth() + 6);
   const endDateTime = endDate.toISOString().split('.')[0] + 'Z';
 
   try {

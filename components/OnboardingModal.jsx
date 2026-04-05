@@ -95,36 +95,54 @@ const SCREENS = [
     );
   },
 
-  // 3: Connect Google Calendar
+  // 3: Connect Google Calendar (interactive)
   function ConnectCalendar() {
-    const steps = [
-      { num: '1', text: 'Tap the Settings button (gear icon) in the top-right' },
-      { num: '2', text: 'Tap "Connect Google Calendar"' },
-      { num: '3', text: 'Sign in with your Google account and approve access' },
-      { num: '4', text: 'Come back and tap the gold Sync All button' },
-    ];
     return (
       <div className="px-6 flex-1">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#f59e0b22' }}>
             <CalendarPlus size={22} color="#f59e0b" />
           </div>
-          <h2 className="text-xl font-bold m-0" style={{ color: '#e2e8f0' }}>Connect Calendar</h2>
+          <h2 className="text-xl font-bold m-0" style={{ color: '#e2e8f0' }}>Connect Google Calendar</h2>
         </div>
         <p className="text-sm mb-4" style={{ color: '#94a3b8' }}>
-          Sync your shows to Google Calendar in 4 easy steps:
+          Link your Google account to sync shows to a dedicated calendar. You can skip this and do it later in Settings.
         </p>
-        <div className="flex flex-col gap-3 p-4 rounded-xl" style={{ background: '#1a1625' }}>
-          {steps.map(s => (
-            <div key={s.num} className="flex gap-2.5 items-start">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
-                   style={{ background: '#f59e0b', color: '#000' }}>{s.num}</div>
-              <div className="text-sm" style={{ color: '#e2e8f0' }}>{s.text}</div>
-            </div>
-          ))}
+
+        <button onClick={async () => {
+                  try {
+                    const res = await fetch('/api/auth/google');
+                    const data = await res.json();
+                    if (data.url) window.location.href = data.url;
+                  } catch { /* silent */ }
+                }}
+                className="w-full py-3 rounded-xl text-[15px] font-bold cursor-pointer border-none text-white flex items-center justify-center gap-2 mb-4"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+          <CalendarCheck2 size={18} /> Connect Google Calendar
+        </button>
+
+        <div className="flex flex-col gap-3 p-4 rounded-xl mb-3" style={{ background: '#1a1625' }}>
+          <div className="text-[13px] font-semibold" style={{ color: '#94a3b8' }}>What happens when you connect:</div>
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#f59e0b', color: '#000' }}>1</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>Sign in with your Google account</div>
+          </div>
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#f59e0b', color: '#000' }}>2</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>Approve calendar access</div>
+          </div>
+          <div className="flex gap-2.5 items-start">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
+                 style={{ background: '#f59e0b', color: '#000' }}>3</div>
+            <div className="text-[13px]" style={{ color: '#e2e8f0' }}>A dedicated <strong style={{ color: '#f59e0b' }}>EDM Event Tracker</strong> calendar is created</div>
+          </div>
         </div>
-        <p className="text-[12px] mt-3" style={{ color: '#475569' }}>
-          The app creates a dedicated calendar for your shows, keeping your main calendar clean.
+
+        <p className="text-[12px]" style={{ color: '#475569' }}>
+          Your credentials stay with Google &mdash; this app never sees your password. You can disconnect anytime in{' '}
+          <span style={{ color: '#a78bfa' }}>Settings</span>.
         </p>
       </div>
     );

@@ -17,7 +17,7 @@ const SEARCH_TYPE_OPTIONS = [
   { value: 'ai', label: 'AI Only' },
 ];
 
-export default function SettingsModal({ settings, persistSettings, onClose }) {
+export default function SettingsModal({ settings, persistSettings, onClose, onShowGuide }) {
   const [showKey, setShowKey] = useState(false);
 
   return (
@@ -232,7 +232,8 @@ export default function SettingsModal({ settings, persistSettings, onClose }) {
           </div>
 
           {/* Show Setup Guide */}
-          <button className="w-full py-2.5 rounded-[10px] text-[13px] font-medium cursor-pointer flex items-center justify-center gap-1.5"
+          <button onClick={() => { onClose(); onShowGuide?.(); }}
+                  className="w-full py-2.5 rounded-[10px] text-[13px] font-medium cursor-pointer flex items-center justify-center gap-1.5"
                   style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#94a3b8' }}>
             <HelpCircle size={14} /> Show Setup Guide
           </button>

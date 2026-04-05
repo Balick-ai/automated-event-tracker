@@ -15,6 +15,7 @@ import SettingsModal from './SettingsModal';
 import DiscoveryQueue from './DiscoveryQueue';
 import AILimitModal from './AILimitModal';
 import SyncProgressModal from './SyncProgressModal';
+import OnboardingModal from './OnboardingModal';
 import { isConnected, syncShowToCalendar, deleteShowFromCalendar, syncAllShows } from '@/lib/calendar';
 
 const AI_SEARCH_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -60,6 +61,9 @@ export default function EventTracker() {
   const [bulkSyncProgress, setBulkSyncProgress] = useState(null);
   const [isBulkSyncing, setIsBulkSyncing] = useState(false);
 
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const showToast = useCallback((msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -95,6 +99,11 @@ export default function EventTracker() {
         }
 
         setSettings(loadedSettings);
+
+        // Show onboarding on first visit
+        if (!loadedSettings.onboardingCompleted) {
+          setShowOnboarding(true);
+        }
       } catch (e) {
         console.error('Failed to load data:', e);
       }
@@ -727,6 +736,7 @@ export default function EventTracker() {
           settings={settings}
           persistSettings={persistSettings}
           onClose={() => setSettingsOpen(false)}
+          onShowGuide={() => setShowOnboarding(true)}
         />
       )}
 
@@ -747,8 +757,17 @@ export default function EventTracker() {
           onSaveKey={(key) => {
             persistSettings({ ...settings, userGeminiKey: key });
             setShowAILimit(false);
-            // Trigger search with the new key
             setTimeout(() => runAISearch(true), 100);
+          }}
+        />
+      )}
+
+      {/* Onboarding */}
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={() => {
+            setShowOnboarding(false);
+            persistSettings({ ...settings, onboardingCompleted: true });
           }}
         />
       )}

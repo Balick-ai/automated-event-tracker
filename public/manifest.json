@@ -1,5 +1,5 @@
 {
-  "name": "Automated Event Tracker",
+  "name": "EDM Event Tracker",
   "short_name": "Event Tracker",
   "description": "Track live music events, discover upcoming shows, and sync to Google Calendar",
   "start_url": "/",

@@ -55,14 +55,14 @@ export default function SettingsModal({ settings, persistSettings, onClose, onSh
                   <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Calendar Name</label>
                   <input value={settings.calendarName || ''}
                          onChange={e => persistSettings({ ...settings, calendarName: e.target.value })}
-                         placeholder="Automated Event Tracker"
+                         placeholder="EDM Event Tracker"
                          className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
                          style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-xs" style={{ color: settings.calendarId ? '#10b981' : '#64748b' }}>
                     {settings.calendarId
-                      ? `Calendar: ${settings.calendarName || 'Automated Event Tracker'}`
+                      ? `Calendar: ${settings.calendarName || 'EDM Event Tracker'}`
                       : 'Calendar will be created on first sync'}
                   </div>
                   {settings.calendarId && (

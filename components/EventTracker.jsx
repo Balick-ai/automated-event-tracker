@@ -33,7 +33,7 @@ export default function EventTracker() {
   const [shows, setShows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('calendar');
-  const [settings, setSettings] = useState({ syncNotGoing: false, calendarId: null, calendarName: 'Automated Event Tracker', city: 'New York', stateCode: 'NY', radius: 25 });
+  const [settings, setSettings] = useState({ syncNotGoing: false, calendarId: null, calendarName: 'EDM Event Tracker', city: 'New York', stateCode: 'NY', radius: 25 });
   const [modal, setModal] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -562,7 +562,7 @@ export default function EventTracker() {
             <div>
               <h1 className="text-xl font-bold m-0"
                   style={{ background: 'linear-gradient(90deg, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Automated Event Tracker
+                EDM Event Tracker
               </h1>
               <div className="text-[11px] mt-0.5" style={{ color: '#64748b' }}>
                 {shows.length} shows tracked · {settings.city || 'New York'}{settings.stateCode ? `, ${settings.stateCode}` : ''}

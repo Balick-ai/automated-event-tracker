@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Automated Event Tracker",
+  title: "EDM Event Tracker",
   description: "Track live music events, discover upcoming shows, and sync to Google Calendar",
   manifest: "/manifest.json",
 };

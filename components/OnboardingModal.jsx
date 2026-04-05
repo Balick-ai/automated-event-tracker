@@ -17,7 +17,7 @@ const SCREENS = [
         </div>
         <h1 className="text-[26px] font-extrabold mb-3 m-0"
             style={{ background: 'linear-gradient(90deg, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Automated Event Tracker
+          EDM Event Tracker
         </h1>
         <p className="text-base m-0 max-w-[300px] leading-relaxed" style={{ color: '#94a3b8' }}>
           Track live music events, discover upcoming shows, and sync everything to Google Calendar.

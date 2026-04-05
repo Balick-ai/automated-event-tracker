@@ -12,8 +12,8 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const SEARCH_TYPE_OPTIONS = [
-  { value: 'ticketmaster', label: 'Ticketmaster Only' },
-  { value: 'both', label: 'Ticketmaster + AI' },
+  { value: 'ticketmaster', label: 'Ticketmaster + Eventbrite' },
+  { value: 'both', label: 'All (TM + EB + AI)' },
   { value: 'ai', label: 'AI Only' },
 ];
 

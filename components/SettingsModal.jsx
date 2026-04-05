@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, HelpCircle, MapPin, Sparkles, Eye, EyeOff, RefreshCw, ExternalLink, CalendarCheck2, LogOut } from 'lucide-react';
 import { isConnected } from '@/lib/calendar';
+import { getSupportedCities } from '@/lib/venues';
 
 const FREQUENCY_OPTIONS = [
   { value: 'off', label: 'Off' },
@@ -19,6 +20,13 @@ const SEARCH_TYPE_OPTIONS = [
 
 export default function SettingsModal({ settings, persistSettings, onClose, onShowGuide }) {
   const [showKey, setShowKey] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  const allCities = getSupportedCities();
+  const filteredCities = citySearch
+    ? allCities.filter(c => c.label.toLowerCase().includes(citySearch.toLowerCase())).slice(0, 6)
+    : allCities.slice(0, 6);
 
   return (
     <div className="fixed inset-0 flex items-end justify-center z-50"
@@ -218,22 +226,41 @@ export default function SettingsModal({ settings, persistSettings, onClose, onSh
               <MapPin size={14} /> Discovery Location
             </div>
             <div className="flex gap-2 mb-2">
-              <div className="flex-1">
+              <div className="flex-1 relative">
                 <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>City</label>
-                <input value={settings.city || ''}
-                       onChange={e => persistSettings({ ...settings, city: e.target.value })}
-                       placeholder="New York"
+                <input value={showCityDropdown ? citySearch : `${settings.city || 'New York'}, ${settings.stateCode || 'NY'}`}
+                       onChange={e => { setCitySearch(e.target.value); setShowCityDropdown(true); }}
+                       onFocus={() => { setCitySearch(''); setShowCityDropdown(true); }}
+                       onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
+                       placeholder="Search city..."
                        className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
                        style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
-              </div>
-              <div style={{ width: 80 }}>
-                <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>State</label>
-                <input value={settings.stateCode || ''}
-                       onChange={e => persistSettings({ ...settings, stateCode: e.target.value.toUpperCase().slice(0, 2) })}
-                       placeholder="NY"
-                       maxLength={2}
-                       className="w-full px-2.5 py-2 rounded-lg text-[13px] outline-none"
-                       style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0', boxSizing: 'border-box' }} />
+                {showCityDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-20"
+                       style={{ background: '#1a1625', border: '1px solid #2d2640', maxHeight: 240 }}>
+                    {filteredCities.map(c => (
+                      <button key={c.label}
+                              onMouseDown={e => e.preventDefault()}
+                              onClick={() => {
+                                persistSettings({ ...settings, city: c.city, stateCode: c.stateCode });
+                                setShowCityDropdown(false);
+                                setCitySearch('');
+                              }}
+                              className="w-full px-3 py-2 text-left text-[13px] cursor-pointer border-none flex justify-between items-center"
+                              style={{
+                                background: settings.city === c.city ? 'rgba(124,58,237,0.13)' : 'transparent',
+                                color: settings.city === c.city ? '#a78bfa' : '#e2e8f0',
+                                borderBottom: '1px solid #12101f',
+                              }}>
+                        <span>{c.label}</span>
+                        <span className="text-[10px]" style={{ color: '#475569' }}>{c.venueCount} venues</span>
+                      </button>
+                    ))}
+                    {filteredCities.length === 0 && (
+                      <div className="px-3 py-2 text-[12px]" style={{ color: '#475569' }}>No matching cities</div>
+                    )}
+                  </div>
+                )}
               </div>
               <div style={{ width: 80 }}>
                 <label className="text-[11px] font-semibold block mb-1" style={{ color: '#64748b' }}>Radius (mi)</label>

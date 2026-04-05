@@ -688,9 +688,16 @@ export default function EventTracker() {
               </button>
             </div>
           ) : (
-            <span className="text-[10px] ml-auto" style={{ color: '#475569' }}>
-              Default: 6 months
-            </span>
+            <div className="relative ml-auto group">
+              <button className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer border-none"
+                      style={{ background: '#2d2640', color: '#94a3b8' }}>
+                i
+              </button>
+              <div className="absolute bottom-full right-0 mb-1.5 px-3 py-2 rounded-lg text-[11px] leading-snug w-[200px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                   style={{ background: '#1e1635', border: '1px solid #7c3aed', color: '#e2e8f0' }}>
+                Optional date range filter. If no dates are set, searches default to 6 months in advance.
+              </div>
+            </div>
           )}
         </div>
       </div>

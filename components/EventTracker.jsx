@@ -665,43 +665,38 @@ export default function EventTracker() {
         </div>
 
         {/* Date range filter — always visible */}
-        <div className="mt-2 flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>From</label>
-            <input type="date" value={searchDateFrom}
-                   onChange={e => setSearchDateFrom(e.target.value)}
-                   className="px-2 py-1 rounded-md text-[11px] outline-none"
-                   style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          <div className="relative">
+            <button onClick={() => setShowDateTip(!showDateTip)}
+                    className="w-[16px] h-[16px] rounded-full flex items-center justify-center text-[9px] font-bold cursor-pointer border-none"
+                    style={{ background: showDateTip ? '#7c3aed' : '#2d2640', color: showDateTip ? '#fff' : '#94a3b8' }}>
+              i
+            </button>
+            {showDateTip && (
+              <div className="absolute bottom-full left-0 mb-1.5 px-3 py-2 rounded-lg text-[11px] leading-snug w-[200px] z-10"
+                   style={{ background: '#1e1635', border: '1px solid #7c3aed', color: '#e2e8f0' }}>
+                Optional date range filter. If no dates are set, searches default to 6 months in advance.
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>To</label>
-            <input type="date" value={searchDateTo}
-                   onChange={e => setSearchDateTo(e.target.value)}
-                   className="px-2 py-1 rounded-md text-[11px] outline-none"
-                   style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
-          </div>
-          {(searchDateFrom || searchDateTo) ? (
-            <div className="flex items-center gap-1 ml-auto">
+          <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>From</label>
+          <input type="date" value={searchDateFrom}
+                 onChange={e => setSearchDateFrom(e.target.value)}
+                 className="px-2 py-1 rounded-md text-[11px] outline-none"
+                 style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+          <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>To</label>
+          <input type="date" value={searchDateTo}
+                 onChange={e => setSearchDateTo(e.target.value)}
+                 className="px-2 py-1 rounded-md text-[11px] outline-none"
+                 style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+          {(searchDateFrom || searchDateTo) && (
+            <>
               <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ color: '#a78bfa', background: '#7c3aed22' }}>Filtered</span>
               <button onClick={() => { setSearchDateFrom(''); setSearchDateTo(''); }}
                       className="bg-transparent border-none cursor-pointer p-0.5" style={{ color: '#64748b' }}>
                 <X size={12} />
               </button>
-            </div>
-          ) : (
-            <div className="relative ml-auto">
-              <button onClick={() => setShowDateTip(!showDateTip)}
-                      className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer border-none"
-                      style={{ background: showDateTip ? '#7c3aed' : '#2d2640', color: showDateTip ? '#fff' : '#94a3b8' }}>
-                i
-              </button>
-              {showDateTip && (
-                <div className="absolute bottom-full right-0 mb-1.5 px-3 py-2 rounded-lg text-[11px] leading-snug w-[200px] z-10"
-                     style={{ background: '#1e1635', border: '1px solid #7c3aed', color: '#e2e8f0' }}>
-                  Optional date range filter. If no dates are set, searches default to 6 months in advance.
-                </div>
-              )}
-            </div>
+            </>
           )}
         </div>
       </div>

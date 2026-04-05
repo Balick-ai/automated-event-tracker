@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader, Sparkles, CalendarRange, X, Info } from 'lucide-react';
+import { Music, Settings, CalendarPlus, Globe, Plus, Calendar, List, Filter, Clock, Loader, Sparkles, X } from 'lucide-react';
 import { getAllShows, saveAllShows, getSettings, saveSettings as persistSettingsDB } from '@/lib/db';
 import {
   uid, TICKET_STATES, ATTEND_STATES, ATTEND_LABELS,
@@ -44,7 +44,6 @@ export default function EventTracker() {
   const [searchBanner, setSearchBanner] = useState(null);
   const [searchDateFrom, setSearchDateFrom] = useState('');
   const [searchDateTo, setSearchDateTo] = useState('');
-  const [showDateRange, setShowDateRange] = useState(false);
 
   // Discovery state
   const [discovering, setDiscovering] = useState(false);
@@ -456,7 +455,14 @@ export default function EventTracker() {
 
   const unsyncedCount = shows.filter(s => !s.calendarSynced && (s.attending !== 'not going' || settings.syncNotGoing)).length;
   const newCount = discoveryQueue ? discoveryQueue.filter(d => !d._duplicate && !dismissed.has(d._id)).length : 0;
-  const unverifiedShows = useMemo(() => shows.filter(s => s.unverified && s.date >= todayStr()), [shows]);
+  const unverifiedShows = useMemo(() => shows.filter(s => {
+    if (!s.unverified) return false;
+    if (s.date < todayStr()) return false;
+    // If date range filter is active, only show unverified within that range
+    if (searchDateFrom && s.date < searchDateFrom) return false;
+    if (searchDateTo && s.date > searchDateTo) return false;
+    return true;
+  }), [shows, searchDateFrom, searchDateTo]);
 
   const timeAgoStr = (ts) => {
     if (!ts) return null;
@@ -638,11 +644,6 @@ export default function EventTracker() {
               {aiSearching ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
               AI Search
             </button>
-            <button onClick={() => setShowDateRange(!showDateRange)}
-                    className="flex items-center rounded-lg px-1.5 py-1 text-[11px] cursor-pointer"
-                    style={{ background: showDateRange || searchDateFrom || searchDateTo ? '#7c3aed' : '#1a1625', border: '1px solid #2d2640', color: showDateRange || searchDateFrom || searchDateTo ? '#fff' : '#64748b' }}>
-              <CalendarRange size={12} />
-            </button>
             {discoveryQueue && !discovering && !aiSearching && (
               <button onClick={() => { setView('queue'); setSearchBanner(null); }}
                       className="flex items-center gap-[4px] rounded-lg px-2.5 py-1 text-[11px] font-medium cursor-pointer"
@@ -661,35 +662,36 @@ export default function EventTracker() {
           )}
         </div>
 
-        {/* Date range filter */}
-        {showDateRange && (
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>From</label>
-              <input type="date" value={searchDateFrom}
-                     onChange={e => setSearchDateFrom(e.target.value)}
-                     className="px-2 py-1 rounded-md text-[11px] outline-none"
-                     style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>To</label>
-              <input type="date" value={searchDateTo}
-                     onChange={e => setSearchDateTo(e.target.value)}
-                     className="px-2 py-1 rounded-md text-[11px] outline-none"
-                     style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
-            </div>
-            {(searchDateFrom || searchDateTo) && (
+        {/* Date range filter — always visible */}
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>From</label>
+            <input type="date" value={searchDateFrom}
+                   onChange={e => setSearchDateFrom(e.target.value)}
+                   className="px-2 py-1 rounded-md text-[11px] outline-none"
+                   style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-[10px] font-semibold" style={{ color: '#64748b' }}>To</label>
+            <input type="date" value={searchDateTo}
+                   onChange={e => setSearchDateTo(e.target.value)}
+                   className="px-2 py-1 rounded-md text-[11px] outline-none"
+                   style={{ background: '#1a1625', border: '1px solid #2d2640', color: '#e2e8f0' }} />
+          </div>
+          {(searchDateFrom || searchDateTo) ? (
+            <div className="flex items-center gap-1 ml-auto">
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ color: '#a78bfa', background: '#7c3aed22' }}>Filtered</span>
               <button onClick={() => { setSearchDateFrom(''); setSearchDateTo(''); }}
                       className="bg-transparent border-none cursor-pointer p-0.5" style={{ color: '#64748b' }}>
                 <X size={12} />
               </button>
-            )}
-            <span className="text-[10px] flex items-center gap-0.5 ml-auto" style={{ color: '#475569' }}>
-              <Info size={10} />
-              {searchDateFrom || searchDateTo ? 'Custom range active' : 'Default: next 6 months'}
+            </div>
+          ) : (
+            <span className="text-[10px] ml-auto" style={{ color: '#475569' }}>
+              Default: 6 months
             </span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Discovery loading */}

@@ -13,8 +13,8 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const SEARCH_TYPE_OPTIONS = [
-  { value: 'ticketmaster', label: 'TM + Eventbrite + Edmtrain' },
-  { value: 'both', label: 'All (TM + EB + ET + AI)' },
+  { value: 'ticketmaster', label: 'Ticketmaster + Eventbrite' },
+  { value: 'both', label: 'All (TM + EB + AI)' },
   { value: 'ai', label: 'AI Only' },
 ];
 

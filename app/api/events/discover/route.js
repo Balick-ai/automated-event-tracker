@@ -9,6 +9,7 @@ export async function GET(request) {
 
   const tmKey = process.env.TICKETMASTER_API_KEY;
   const ebToken = process.env.EVENTBRITE_API_TOKEN;
+  const edmtrainKey = process.env.EDMTRAIN_API_KEY;
 
   if (!tmKey) {
     return NextResponse.json({ error: 'Ticketmaster API key not configured' }, { status: 500 });
@@ -42,6 +43,13 @@ export async function GET(request) {
     // Add Eventbrite if configured (NYC organizers only for now)
     if (ebToken && isNYC) {
       searches.push({ name: 'Eventbrite', fn: fetchEventbriteVenues(ebToken) });
+    }
+
+    // Add Edmtrain if configured
+    if (edmtrainKey) {
+      const startDate = dateFrom || now.toISOString().split('T')[0];
+      const endDateStr = dateTo || endDate.toISOString().split('T')[0];
+      searches.push({ name: 'Edmtrain', fn: fetchEdmtrain(edmtrainKey, city, stateCode, startDate, endDateStr) });
     }
 
     const results = await Promise.allSettled(searches.map(s => s.fn));
@@ -273,4 +281,75 @@ function extractNotes(event) {
   }
 
   return parts.join(' · ');
+}
+
+// --- Edmtrain: EDM-focused event search ---
+async function fetchEdmtrain(apiKey, city, stateCode, startDate, endDate) {
+  // First, look up the location ID for the city
+  const locParams = new URLSearchParams({ client: apiKey });
+  if (stateCode) locParams.set('state', stateCode);
+  if (city) locParams.set('city', city);
+
+  let locationId = null;
+  try {
+    const locRes = await fetch(`https://edmtrain.com/api/locations?${locParams}`);
+    if (locRes.ok) {
+      const locData = await locRes.json();
+      if (locData.success && locData.data?.length > 0) {
+        locationId = locData.data[0].id;
+      }
+    }
+  } catch (e) {
+    console.error('Edmtrain location lookup failed:', e);
+  }
+
+  // Fetch events
+  const eventParams = new URLSearchParams({
+    client: apiKey,
+    startDate,
+    endDate,
+    includeElectronicGenreInd: 'true',
+  });
+  if (locationId) eventParams.set('locationIds', String(locationId));
+
+  const res = await fetch(`https://edmtrain.com/api/events?${eventParams}`);
+  if (!res.ok) {
+    throw new Error(`Edmtrain API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!data.success || !data.data) return [];
+
+  const events = [];
+  for (const event of data.data) {
+    const artists = event.artistList || [];
+    if (artists.length === 0 && !event.name) continue;
+
+    const mainArtist = artists[0]?.name || event.name || 'Unknown';
+    const supportActs = artists.slice(1).map(a => a.name).join(', ');
+    const venue = event.venue?.name || 'TBA';
+    const date = event.date || null;
+
+    if (!date) continue;
+
+    const notes = [
+      supportActs ? `w/ ${supportActs}` : '',
+      event.festivalInd ? 'Festival' : '',
+      event.ageRestriction ? `${event.ageRestriction}+` : '',
+    ].filter(Boolean).join(' · ');
+
+    events.push({
+      artist: mainArtist,
+      venue,
+      date,
+      endDate: null,
+      startTime: null,
+      endTime: null,
+      notes,
+      ticketUrl: event.link || null,
+      _source: 'edmtrain',
+    });
+  }
+
+  return events;
 }
